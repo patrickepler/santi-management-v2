@@ -126,7 +126,7 @@ const Icon = ({ name, size = 20 }) => {
 };
 
 // ============ COMPONENTS ============
-const LoginScreen = () => (
+const LoginScreen = ({ onDemoLogin }) => (
   <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', padding: '20px' }}>
     <div style={{ textAlign: 'center', width: '100%', maxWidth: '400px' }}>
       <div style={{ marginBottom: '24px' }}>
@@ -135,6 +135,11 @@ const LoginScreen = () => (
         <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginTop: '4px' }}>Sustainable Development</p>
       </div>
       <SignIn routing="hash" />
+      <div style={{ marginTop: '20px' }}>
+        <button type="button" onClick={onDemoLogin} style={{ padding: '12px 24px', background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', backdropFilter: 'blur(4px)' }}>
+          Demo Login (Patrick - Admin)
+        </button>
+      </div>
     </div>
   </div>
 );
@@ -323,6 +328,7 @@ const MultiSelect = ({ values = [], options, onChange, placeholder }) => { const
 export default function Home() {
   const { isLoaded, isSignedIn, user: clerkUser } = useUser();
   const [users] = useState(mockUsers);
+  const [demoMode, setDemoMode] = useState(false);
   const [buildingTasks, setBuildingTasks] = useState(initialBuildingTasks);
   const [kanbanTasks, setKanbanTasks] = useState([...initialKanbanTasks, ...initialSCTasks]);
   const [recurringTasks, setRecurringTasks] = useState(initialRecurringTasks);
@@ -347,13 +353,13 @@ export default function Home() {
   const [dragOverRow, setDragOverRow] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const currentUser = clerkUser ? users.find(u => u.email === clerkUser.primaryEmailAddress?.emailAddress) || { id: 999, email: clerkUser.primaryEmailAddress?.emailAddress || 'unknown', username: clerkUser.firstName || 'User', avatar: clerkUser.imageUrl || 'https://ui-avatars.com/api/?name=User&background=059669&color=fff', role: 'worker', isAdmin: false, managerId: 1 } : null;
+  const currentUser = demoMode ? users[0] : clerkUser ? users.find(u => u.email === clerkUser.primaryEmailAddress?.emailAddress) || { id: 999, email: clerkUser.primaryEmailAddress?.emailAddress || 'unknown', username: clerkUser.firstName || 'User', avatar: clerkUser.imageUrl || 'https://ui-avatars.com/api/?name=User&background=059669&color=fff', role: 'worker', isAdmin: false, managerId: 1 } : null;
 
   // Close sidebar on mobile by default
   useEffect(() => { if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false); }, []);
 
   if (!isLoaded) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}><div style={{ color: '#fff', fontSize: '18px' }}>Loading...</div></div>;
-  if (!isSignedIn) return <LoginScreen />;
+  if (!isSignedIn && !demoMode) return <LoginScreen onDemoLogin={() => setDemoMode(true)} />;
 
   const isManager = currentUser.role === 'manager';
   const handleBuildingStatusChange = (taskId, newStatus, oldStatus) => { setBuildingTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t)); if (newStatus === 'Supply Chain Pending Order' && oldStatus !== 'Supply Chain Pending Order') { const task = buildingTasks.find(t => t.id === taskId); if (task && !kanbanTasks.find(kt => kt.type === 'sc' && kt.buildingTaskId === taskId)) { setKanbanTasks(prev => [...prev, { id: 'sc' + Date.now(), buildingTaskId: taskId, title: `SC for ${task.step} - ${task.task} - ${task.subCategory} - ${task.villa}`, assignedTo: PROCUREMENT_USER_ID, column: 'thisWeek', scStatus: 'research', dueDate: calculateDeadlineOnSite(task.earliestStart), deadlineOnSite: calculateDeadlineOnSite(task.earliestStart), expectedArrival: '', type: 'sc', createdAt: TODAY }]); } } };
@@ -404,7 +410,7 @@ export default function Home() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #065f46, #10b981)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Icon name="leaf" size={20} /></div><div><div style={{ fontSize: '15px', fontWeight: '700', color: '#1f2937' }}>Santi</div><div style={{ fontSize: '11px', color: '#6b7280' }}>Sustainable Dev</div></div></div>
           <button type="button" onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}><Icon name="x" size={20} /></button>
         </div>
-        <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#f9fafb', borderRadius: '10px' }}><img src={currentUser.avatar} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: '13px', fontWeight: '600' }}>{currentUser.username}</div><div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'capitalize' }}>{currentUser.role}</div></div><button type="button" onClick={() => setShowNotifications(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', position: 'relative', padding: '4px' }}><Icon name="bell" size={18} />{unreadCount > 0 && <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '16px', height: '16px', background: '#dc2626', color: '#fff', borderRadius: '50%', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>{unreadCount}</span>}</button><SignOutButton><button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button></SignOutButton></div></div>
+        <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#f9fafb', borderRadius: '10px' }}><img src={currentUser.avatar} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: '13px', fontWeight: '600' }}>{currentUser.username}</div><div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'capitalize' }}>{currentUser.role}</div></div><button type="button" onClick={() => setShowNotifications(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', position: 'relative', padding: '4px' }}><Icon name="bell" size={18} />{unreadCount > 0 && <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '16px', height: '16px', background: '#dc2626', color: '#fff', borderRadius: '50%', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>{unreadCount}</span>}</button>{demoMode ? <button type="button" onClick={() => setDemoMode(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button> : <SignOutButton><button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button></SignOutButton>}</div></div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>{navItems.map(item => (<div key={item.id}><button type="button" onClick={() => { if (item.subItems) { setExpandedNav(p => p.includes(item.id) ? p.filter(x => x !== item.id) : [...p, item.id]); } else { setActiveNav(item.id); if (window.innerWidth < 768) setSidebarOpen(false); } }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: activeNav === item.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', color: activeNav === item.id ? '#059669' : '#4b5563', marginBottom: '4px' }}><Icon name={item.icon} size={18} /><span style={{ flex: 1, textAlign: 'left', fontSize: '14px', fontWeight: '500' }}>{item.label}</span>{item.subItems && <Icon name={expandedNav.includes(item.id) ? 'chevronDown' : 'chevronRight'} size={16} />}</button>{item.subItems && expandedNav.includes(item.id) && <div style={{ marginLeft: '28px', marginBottom: '8px' }}>{item.subItems.map(sub => <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '8px 12px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px' }}>{sub.label}</button>)}</div>}</div>))}</div>
       </aside>
 
