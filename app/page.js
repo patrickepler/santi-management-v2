@@ -396,7 +396,7 @@ export default function Home() {
       </div>
 
       {/* Sidebar Overlay */}
-      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ display: 'none', position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 999, '@media (max-width: 768px)': { display: 'block' } }} />}
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 999 }} />}
 
       {/* Sidebar */}
       <aside style={{ width: '260px', minWidth: '260px', background: '#fff', borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: sidebarOpen ? 0 : '-260px', bottom: 0, zIndex: 1000, transition: 'left 0.3s ease' }}>
