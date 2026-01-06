@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { useUser, SignIn, SignOutButton } from '@clerk/nextjs';
 
 // ============ USERS ============
 const mockUsers = [
@@ -172,41 +173,17 @@ const Icon = ({ name, size = 20 }) => {
 };
 
 // ============ COMPONENTS ============
-const LoginScreen = ({ onLogin, users }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-
-  const handleLogin = () => {
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) onLogin(user);
-    else setError('Invalid credentials');
-  };
-
+// ============ CLERK LOGIN SCREEN ============
+const LoginScreen = () => {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
-      <div style={{ background: '#fff', borderRadius: '24px', padding: '48px', width: '380px', boxShadow: '0 25px 50px rgba(0,0,0,0.25)' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ width: '64px', height: '64px', background: 'linear-gradient(135deg, #065f46, #10b981)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#fff' }}><Icon name="leaf" /></div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', margin: 0 }}>Santi Management</h1>
-          <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Sustainable Development</p>
-        </div>
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '6px' }}>Email</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', padding: '12px', fontSize: '14px', border: '1px solid #e5e7eb', borderRadius: '10px', boxSizing: 'border-box' }} />
-        </div>
+      <div style={{ textAlign: 'center' }}>
         <div style={{ marginBottom: '24px' }}>
-          <label style={{ fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '6px' }}>Password</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '12px', fontSize: '14px', border: '1px solid #e5e7eb', borderRadius: '10px', boxSizing: 'border-box' }} />
+          <div style={{ width: '64px', height: '64px', background: 'linear-gradient(135deg, #065f46, #10b981)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#fff' }}><Icon name="leaf" /></div>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', margin: 0, color: '#fff' }}>Santi Management V2</h1>
+          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginTop: '4px' }}>Sustainable Development</p>
         </div>
-        {error && <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '16px', textAlign: 'center' }}>{error}</p>}
-        <button type="button" onClick={handleLogin} style={{ width: '100%', padding: '14px', fontSize: '15px', fontWeight: '600', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', marginBottom: '16px' }}>Sign In</button>
-        <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #e5e7eb' }}>
-          <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', marginBottom: '12px' }}>Demo accounts (password: demo123)</p>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            {users.map(u => <button key={u.id} type="button" onClick={() => { setEmail(u.email); setPassword(u.password); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', fontSize: '11px', background: '#f3f4f6', border: 'none', borderRadius: '6px', cursor: 'pointer' }}><img src={u.avatar} alt="" style={{ width: '20px', height: '20px', borderRadius: '50%' }} />{u.username.split(' ')[0]}<span style={{ color: '#9ca3af' }}>({u.role})</span></button>)}
-          </div>
-        </div>
+        <SignIn routing="hash" />
       </div>
     </div>
   );
@@ -552,8 +529,8 @@ const EditableCell = ({ value, onChange, placeholder }) => {
 
 // ============ MAIN APP ============
 export default function Home() {
+  const { isLoaded, isSignedIn, user: clerkUser } = useUser();
   const [users] = useState(mockUsers);
-  const [currentUser, setCurrentUser] = useState(null);
   const [buildingTasks, setBuildingTasks] = useState(initialBuildingTasks);
   const [kanbanTasks, setKanbanTasks] = useState([...initialKanbanTasks, ...initialSCTasks]);
   const [recurringTasks, setRecurringTasks] = useState(initialRecurringTasks);
@@ -571,8 +548,20 @@ export default function Home() {
   const [dragOverTaskId, setDragOverTaskId] = useState(null);
   const [search, setSearch] = useState('');
 
+  // Map Clerk user to app user by email
+  const currentUser = clerkUser ? users.find(u => u.email === clerkUser.primaryEmailAddress?.emailAddress) || {
+    id: 999,
+    email: clerkUser.primaryEmailAddress?.emailAddress || 'unknown',
+    username: clerkUser.firstName || clerkUser.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User',
+    avatar: clerkUser.imageUrl || 'https://ui-avatars.com/api/?name=User&background=059669&color=fff',
+    role: 'worker',
+    isAdmin: false,
+    managerId: 1
+  } : null;
+
   // Generate recurring task instances
   useEffect(() => {
+    if (!currentUser) return;
     recurringTasks.forEach(rt => {
       let shouldCreate = false;
       if (rt.frequency === 'daily') shouldCreate = true;
@@ -604,9 +593,19 @@ export default function Home() {
         }
       }
     });
-  }, [recurringTasks]);
+  }, [recurringTasks, currentUser]);
 
-  if (!currentUser) return <LoginScreen onLogin={setCurrentUser} users={users} />;
+  // Loading state
+  if (!isLoaded) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}>
+        <div style={{ color: '#fff', fontSize: '18px' }}>Loading...</div>
+      </div>
+    );
+  }
+
+  // Not signed in - show Clerk SignIn
+  if (!isSignedIn) return <LoginScreen />;
 
   const isManager = currentUser.role === 'manager';
   const viewingUserId = selectedTaskUser || currentUser.id;
@@ -814,7 +813,9 @@ export default function Home() {
             <div style={{ fontSize: '13px', fontWeight: '600' }}>{currentUser.username}</div>
             <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'capitalize' }}>{currentUser.role}</div>
           </div>
-          <button type="button" onClick={() => setCurrentUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button>
+          <SignOutButton>
+            <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button>
+          </SignOutButton>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
