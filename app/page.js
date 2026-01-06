@@ -4,10 +4,10 @@ import { useUser, SignIn, SignOutButton } from '@clerk/nextjs';
 
 // ============ USERS ============
 const mockUsers = [
-  { id: 1, email: 'patrick@santi.com', username: 'Patrick', avatar: 'https://ui-avatars.com/api/?name=Patrick&background=059669&color=fff', role: 'manager', isAdmin: true, managerId: null },
-  { id: 2, email: 'david@santi.com', username: 'David', avatar: 'https://ui-avatars.com/api/?name=David&background=0ea5e9&color=fff', role: 'manager', isAdmin: false, managerId: 1 },
-  { id: 3, email: 'jean@santi.com', username: 'Jean', avatar: 'https://ui-avatars.com/api/?name=Jean&background=8b5cf6&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 2 },
-  { id: 4, email: 'ball@santi.com', username: 'Ball', avatar: 'https://ui-avatars.com/api/?name=Ball&background=f59e0b&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 1 },
+  { id: 1, email: 'patrick@northstar-performance.com', username: 'Patrick', avatar: 'https://ui-avatars.com/api/?name=Patrick&background=059669&color=fff', role: 'manager', isAdmin: true, managerId: null },
+  { id: 2, email: 'david@northstar-performance.com', username: 'David', avatar: 'https://ui-avatars.com/api/?name=David&background=0ea5e9&color=fff', role: 'manager', isAdmin: false, managerId: 1 },
+  { id: 3, email: 'jiratchaya@northstar-performance.com', username: 'Jean', avatar: 'https://ui-avatars.com/api/?name=Jean&background=8b5cf6&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 2 },
+  { id: 4, email: 'jirapongthong@gmail.com', username: 'Ball', avatar: 'https://ui-avatars.com/api/?name=Ball&background=f59e0b&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 1 },
 ];
 
 const PROCUREMENT_USER_ID = 4;
