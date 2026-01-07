@@ -894,10 +894,7 @@ export default function Home() {
   const navItems = [
     { id: 'taskBoard', label: 'Task Board', icon: 'kanban' }, 
     { id: 'recurring', label: 'Recurring Tasks', icon: 'repeat' }, 
-    { id: 'sequence', label: 'Building Sequence', icon: 'list', subItems: [
-      ...buildingSequences.map(s => ({ id: `sequence-${s.id}`, label: s.label })),
-      { id: 'add-sequence', label: '+ Add New Sequence', isAdd: true }
-    ]}, 
+    { id: 'sequence', label: 'Building Sequence', icon: 'list', subItems: buildingSequences.map(s => ({ id: `sequence-${s.id}`, label: s.label }))}, 
     ...(currentUser.isAdmin && pendingCount > 0 ? [{ id: 'pendingApprovals', label: `Pending Approvals (${pendingCount})`, icon: 'check' }] : []),
     { id: 'schedule', label: 'Daily Worker Schedule', icon: 'calendar' }, 
     { id: 'workers', label: 'Workforce', icon: 'users' }, 
@@ -932,9 +929,7 @@ export default function Home() {
           <button type="button" onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}><Icon name="x" size={20} /></button>
         </div>
         <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#f9fafb', borderRadius: '10px' }}><img src={currentUser.avatar} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: '13px', fontWeight: '600' }}>{currentUser.username}</div><div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'capitalize' }}>{currentUser.role}</div></div><button type="button" onClick={() => setShowNotifications(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', position: 'relative', padding: '4px' }}><Icon name="bell" size={18} />{unreadCount > 0 && <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '16px', height: '16px', background: '#dc2626', color: '#fff', borderRadius: '50%', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>{unreadCount}</span>}</button>{demoMode ? <button type="button" onClick={() => setDemoMode(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button> : <SignOutButton><button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button></SignOutButton>}</div></div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>{navItems.map(item => (<div key={item.id}><button type="button" onClick={() => { if (item.subItems) { setExpandedNav(p => p.includes(item.id) ? p.filter(x => x !== item.id) : [...p, item.id]); if (item.id === 'sequence') { setActiveNav('sequenceOverview'); } } else { setActiveNav(item.id); if (window.innerWidth < 768) setSidebarOpen(false); } }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: activeNav === item.id || (item.id === 'sequence' && activeNav === 'sequenceOverview') ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', color: activeNav === item.id || (item.id === 'sequence' && activeNav === 'sequenceOverview') ? '#059669' : '#4b5563', marginBottom: '4px' }}><Icon name={item.icon} size={18} /><span style={{ flex: 1, textAlign: 'left', fontSize: '14px', fontWeight: '500' }}>{item.label}</span>{item.subItems && <Icon name={expandedNav.includes(item.id) ? 'chevronDown' : 'chevronRight'} size={16} />}</button>{item.subItems && expandedNav.includes(item.id) && <div style={{ marginLeft: '28px', marginBottom: '8px' }}>{item.subItems.map(sub => sub.isAdd ? (
-          <button key={sub.id} type="button" onClick={() => setAddSequenceModal(true)} style={{ width: '100%', padding: '8px 12px', background: '#f0fdf4', border: '1px dashed #86efac', borderRadius: '6px', cursor: 'pointer', color: '#059669', fontSize: '12px', textAlign: 'left', marginTop: '8px', fontWeight: '600' }}>{sub.label}</button>
-        ) : (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>{navItems.map(item => (<div key={item.id}><button type="button" onClick={() => { if (item.subItems) { setExpandedNav(p => p.includes(item.id) ? p.filter(x => x !== item.id) : [...p, item.id]); if (item.id === 'sequence') { setActiveNav('sequenceOverview'); } } else { setActiveNav(item.id); if (window.innerWidth < 768) setSidebarOpen(false); } }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: activeNav === item.id || (item.id === 'sequence' && activeNav === 'sequenceOverview') ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', color: activeNav === item.id || (item.id === 'sequence' && activeNav === 'sequenceOverview') ? '#059669' : '#4b5563', marginBottom: '4px' }}><Icon name={item.icon} size={18} /><span style={{ flex: 1, textAlign: 'left', fontSize: '14px', fontWeight: '500' }}>{item.label}</span>{item.subItems && <Icon name={expandedNav.includes(item.id) ? 'chevronDown' : 'chevronRight'} size={16} />}</button>{item.subItems && expandedNav.includes(item.id) && <div style={{ marginLeft: '28px', marginBottom: '8px' }}>{item.subItems.map(sub => (
           <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '8px 12px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px' }}>{sub.label}</button>
         ))}</div>}</div>))}</div>
       </aside>
@@ -942,7 +937,7 @@ export default function Home() {
       {/* Main Content */}
       <main style={{ flex: 1, overflowY: 'auto', padding: '24px', marginLeft: sidebarOpen ? '260px' : '0', paddingTop: sidebarOpen ? '24px' : '84px', transition: 'margin-left 0.3s ease' }}>
         {/* Task Board */}
-        {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{isManager && !selectedTaskUser ? 'All Tasks' : 'My Tasks'}</p></div><select value={selectedTaskUser || (isManager ? 'all' : '')} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : e.target.value ? Number(e.target.value) : null)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="">My Tasks</option>{isManager && <option value="all">All Tasks</option>}{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={handleAddTask} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} currentUserId={currentUser.id} />)}</div></>)}
+        {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{selectedTaskUser === 'all' ? 'All Tasks' : users.find(u => u.id === (selectedTaskUser || currentUser.id))?.username + "'s Tasks"}</p></div><select value={selectedTaskUser || currentUser.id} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : Number(e.target.value))} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}>{isManager && <option value="all">All Tasks</option>}{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={handleAddTask} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} currentUserId={currentUser.id} />)}</div></>)}
 
         {/* Recurring Tasks */}
         {activeNav === 'recurring' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Recurring Tasks</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredRecurring.length} tasks</p></div><select value={recurringFilter} onChange={e => setRecurringFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="all">All People</option>{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={() => setRecurringModal({})} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add</button></div>
@@ -1068,36 +1063,171 @@ export default function Home() {
             </div>
           </div>
           
-          {/* Worker-Row Based Schedule */}
+          {/* Task-Based 3-Day Schedule */}
           {(() => {
             const yesterday = new Date(selectedDate); yesterday.setDate(yesterday.getDate() - 1);
+            const tomorrow = new Date(selectedDate); tomorrow.setDate(tomorrow.getDate() + 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
             const todayStr = selectedDate;
+            const tomorrowStr = tomorrow.toISOString().split('T')[0];
             
-            // Get all active workers
-            const allWorkers = workforce.filter(w => w.status === 'active');
-            
-            // Get tasks with assignments
-            const getWorkerTasks = (workerName, workerType) => {
-              return buildingTasks.filter(t => {
-                const workers = workerType === 'skilled' ? (t.skilledWorkers || []) : (t.unskilledWorkers || []);
-                return workers.includes(workerName) && 
-                  (t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)' || t.status === 'Done');
-              });
+            // Get all active tasks with workers - sorted by worker count (multi-worker first)
+            const getActiveTasks = () => {
+              return buildingTasks
+                .filter(t => t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)')
+                .map(t => ({
+                  ...t,
+                  workerCount: (t.skilledWorkers?.length || 0) + (t.unskilledWorkers?.length || 0)
+                }))
+                .sort((a, b) => b.workerCount - a.workerCount);
             };
+            
+            // Get available tasks from Building Sequence for assignment
+            const availableTasks = buildingTasks.filter(t => 
+              t.status === 'Ready to start (Supply Chain confirmed on-site)' &&
+              (t.skilledWorkers?.length === 0 && t.unskilledWorkers?.length === 0)
+            );
+            
+            const activeTasks = getActiveTasks();
+            
+            // Dummy yesterday tasks with completed data
+            const yesterdayTasks = [
+              { id: 'y1', step: 'Prefab Re-Bar', task: 'Re-Bar', villa: 'Villa 3', workers: ['zin', 'Tun Sein Maung'], estTime: 8, realTime: 9, status: 'finished' },
+              { id: 'y2', step: 'Set up Formwork', task: 'Formwork', villa: 'Villa 3', workers: ['Joshua', 'Sone', 'Min Pyea'], estTime: 8, realTime: 7.5, status: 'finished' },
+              { id: 'y3', step: 'Site Preparation', task: 'General', villa: 'Villa 3', workers: ['diesel', 'Thein Win'], estTime: 6, realTime: 6, status: 'finished' },
+              { id: 'y4', step: 'Material Transport', task: 'Logistics', villa: 'Villa 3', workers: ['San Shwe'], estTime: 4, realTime: 5, status: 'stillInProgress' },
+            ].sort((a, b) => b.workers.length - a.workers.length);
             
             // Calculate stats
             const finishedCount = buildingTasks.filter(t => t.scheduleStatus === 'finished').length;
             const inProgressCount = buildingTasks.filter(t => t.scheduleStatus === 'stillInProgress').length;
             const blockedCount = buildingTasks.filter(t => t.scheduleStatus === 'blocked').length;
             
-            // Workers with no tasks today
-            const workersWithTasks = new Set();
-            buildingTasks.filter(t => t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)').forEach(t => {
-              (t.skilledWorkers || []).forEach(w => workersWithTasks.add(w));
-              (t.unskilledWorkers || []).forEach(w => workersWithTasks.add(w));
+            // Workers with no tasks
+            const allWorkers = workforce.filter(w => w.status === 'active');
+            const assignedWorkers = new Set();
+            activeTasks.forEach(t => {
+              (t.skilledWorkers || []).forEach(w => assignedWorkers.add(w));
+              (t.unskilledWorkers || []).forEach(w => assignedWorkers.add(w));
             });
-            const unassignedCount = allWorkers.filter(w => !workersWithTasks.has(w.name)).length;
+            const unassignedWorkers = allWorkers.filter(w => !assignedWorkers.has(w.name));
+            
+            const StatusDropdownSchedule = ({ value, onChange, disabled }) => (
+              <select 
+                value={value} 
+                onChange={e => onChange(e.target.value)}
+                disabled={disabled}
+                style={{ 
+                  padding: '4px 8px', 
+                  fontSize: '11px', 
+                  border: '1px solid #e5e7eb', 
+                  borderRadius: '4px',
+                  background: value === 'finished' ? '#dcfce7' : value === 'stillInProgress' ? '#fef3c7' : value === 'blocked' ? '#fee2e2' : '#fff',
+                  color: value === 'finished' ? '#059669' : value === 'stillInProgress' ? '#d97706' : value === 'blocked' ? '#dc2626' : '#6b7280',
+                  fontWeight: '600',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  opacity: disabled ? 0.7 : 1
+                }}
+              >
+                <option value="pending">Pending</option>
+                <option value="finished">✓ Finished</option>
+                <option value="stillInProgress">→ In Progress</option>
+                <option value="blocked">✕ Blocked</option>
+              </select>
+            );
+            
+            const TaskCard = ({ task, day, isYesterday }) => {
+              const workers = isYesterday ? task.workers : [...(task.skilledWorkers || []), ...(task.unskilledWorkers || [])];
+              const workerCount = workers.length;
+              const isMultiWorker = workerCount > 1;
+              
+              return (
+                <div style={{ 
+                  background: '#fff', 
+                  borderRadius: '8px', 
+                  border: isMultiWorker ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                  padding: '12px',
+                  marginBottom: '8px'
+                }}>
+                  {/* Task Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                        {isMultiWorker && <span style={{ fontSize: '10px', padding: '2px 6px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '4px', fontWeight: '600' }}>👥 {workerCount}</span>}
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#1f2937' }}>{task.step}</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>{task.task} • {task.villa}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Workers List - Prominent */}
+                  <div style={{ marginBottom: '10px', padding: '8px', background: '#f9fafb', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '600', color: '#6b7280', marginBottom: '6px' }}>WORKERS</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {workers.map((w, i) => {
+                        const workerInfo = workforce.find(wf => wf.name === w);
+                        const isSkilled = isYesterday ? i < 1 : (task.skilledWorkers || []).includes(w);
+                        return (
+                          <div key={i} style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '4px',
+                            padding: '4px 8px',
+                            background: isSkilled ? '#dbeafe' : '#f3f4f6',
+                            borderRadius: '4px'
+                          }}>
+                            <div style={{ 
+                              width: '18px', 
+                              height: '18px', 
+                              borderRadius: '50%', 
+                              background: isSkilled ? '#1d4ed8' : '#6b7280', 
+                              color: '#fff', 
+                              fontSize: '9px', 
+                              fontWeight: '600',
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center' 
+                            }}>{w.charAt(0).toUpperCase()}</div>
+                            <span style={{ fontSize: '12px', fontWeight: '500', color: isSkilled ? '#1d4ed8' : '#374151' }}>{w}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Time & Status Row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '11px', color: '#9ca3af' }}>Est:</span>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280' }}>{isYesterday ? task.estTime : (parseFloat(task.duration) || 0)}h</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '11px', color: '#9ca3af' }}>Real:</span>
+                      {isYesterday ? (
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: task.realTime > task.estTime ? '#dc2626' : '#059669' }}>{task.realTime}h</span>
+                      ) : (
+                        <input 
+                          type="number" 
+                          step="0.5" 
+                          min="0" 
+                          value={task.realTime || ''} 
+                          onChange={e => setBuildingTasks(prev => prev.map(t => t.id === task.id ? { ...t, realTime: parseFloat(e.target.value) || '' } : t))}
+                          placeholder="0"
+                          style={{ width: '45px', padding: '3px', border: '1px solid #e5e7eb', borderRadius: '4px', textAlign: 'center', fontSize: '12px' }} 
+                        />
+                      )}
+                    </div>
+                    <div style={{ marginLeft: 'auto' }}>
+                      <StatusDropdownSchedule 
+                        value={isYesterday ? task.status : (task.scheduleStatus || 'pending')} 
+                        onChange={val => !isYesterday && setBuildingTasks(prev => prev.map(t => t.id === task.id ? { ...t, scheduleStatus: val } : t))}
+                        disabled={isYesterday}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            };
             
             return (
               <div style={{ display: 'grid', gap: '24px' }}>
@@ -1116,202 +1246,171 @@ export default function Home() {
                     <div style={{ fontSize: '12px', color: '#6b7280' }}>Blocked</div>
                   </div>
                   <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '16px' }}>
-                    <div style={{ fontSize: '24px', fontWeight: '700', color: unassignedCount > 0 ? '#dc2626' : '#059669' }}>{unassignedCount}</div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: unassignedWorkers.length > 0 ? '#dc2626' : '#059669' }}>{unassignedWorkers.length}</div>
                     <div style={{ fontSize: '12px', color: '#6b7280' }}>Unassigned Workers</div>
                   </div>
                 </div>
                 
-                {/* Worker Schedule Table */}
-                <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
-                      <thead>
-                        <tr style={{ background: '#f9fafb' }}>
-                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', width: '180px', borderBottom: '1px solid #e5e7eb' }}>WORKER</th>
-                          <th colSpan="4" style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', borderBottom: '1px solid #e5e7eb', borderLeft: '2px solid #e5e7eb', background: '#f3f4f6' }}>
-                            YESTERDAY - {new Date(yesterdayStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                          </th>
-                          <th colSpan="4" style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#059669', textAlign: 'center', borderBottom: '1px solid #e5e7eb', borderLeft: '2px solid #059669', background: '#ecfdf5' }}>
-                            TODAY - {new Date(todayStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                          </th>
-                        </tr>
-                        <tr style={{ background: '#fafafa' }}>
-                          <th style={{ padding: '8px 16px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}></th>
-                          <th style={{ padding: '8px 12px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'left', borderBottom: '1px solid #e5e7eb', borderLeft: '2px solid #e5e7eb' }}>TASK</th>
-                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '60px' }}>EST</th>
-                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '60px' }}>REAL</th>
-                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '100px' }}>STATUS</th>
-                          <th style={{ padding: '8px 12px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'left', borderBottom: '1px solid #e5e7eb', borderLeft: '2px solid #059669' }}>TASK</th>
-                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '60px' }}>EST</th>
-                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '60px' }}>REAL</th>
-                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '100px' }}>STATUS</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allWorkers.map((worker, idx) => {
-                          const workerTasks = getWorkerTasks(worker.name, worker.type);
-                          const activeTasks = workerTasks.filter(t => t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)');
-                          const hasWork = activeTasks.length > 0;
-                          
-                          // Yesterday dummy data (completed)
-                          const yesterdayData = worker.yesterdayData || {
-                            task: idx < 5 ? ['Prefab Re-Bar', 'Set up Formwork', 'Set Re-Bar Inside', 'Brace Formwork', 'Site Cleanup'][idx] : 'General Labor',
-                            villa: 'Villa 3',
-                            estTime: [4, 8, 6, 8, 4][idx % 5],
-                            realTime: [4.5, 7.5, 6, 9, 3.5][idx % 5],
-                            status: ['finished', 'finished', 'finished', 'stillInProgress', 'finished'][idx % 5]
-                          };
-                          
-                          // Today data
-                          const todayTask = activeTasks[0];
-                          const todayData = {
-                            task: todayTask ? `${todayTask.step}` : '',
-                            villa: todayTask?.villa || '',
-                            estTime: todayTask ? parseFloat(todayTask.duration) || 0 : 0,
-                            realTime: todayTask?.realTime || '',
-                            status: todayTask?.scheduleStatus || 'pending'
-                          };
-                          
-                          return (
-                            <tr key={worker.id} style={{ borderBottom: '1px solid #f3f4f6', background: !hasWork ? '#fef2f2' : 'transparent' }}>
-                              {/* Worker Name */}
-                              <td style={{ padding: '12px 16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <div style={{ 
-                                    width: '36px', 
-                                    height: '36px', 
-                                    borderRadius: '50%', 
-                                    background: worker.type === 'skilled' ? '#1d4ed8' : '#6b7280', 
-                                    color: '#fff', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center', 
-                                    fontSize: '14px', 
-                                    fontWeight: '600' 
-                                  }}>{worker.name.charAt(0).toUpperCase()}</div>
-                                  <div>
-                                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{worker.name}</div>
-                                    <div style={{ fontSize: '11px', color: worker.type === 'skilled' ? '#1d4ed8' : '#6b7280' }}>{worker.type} • {worker.hourlyRate} THB/hr</div>
-                                  </div>
-                                </div>
-                              </td>
-                              
-                              {/* Yesterday Task */}
-                              <td style={{ padding: '8px 12px', borderLeft: '2px solid #e5e7eb', background: '#f9fafb' }}>
-                                <div style={{ fontSize: '12px', fontWeight: '500', color: '#374151' }}>{yesterdayData.task}</div>
-                                <div style={{ fontSize: '10px', color: '#9ca3af' }}>{yesterdayData.villa}</div>
-                              </td>
-                              <td style={{ padding: '8px', textAlign: 'center', background: '#f9fafb' }}>
-                                <span style={{ fontSize: '12px', color: '#6b7280' }}>{yesterdayData.estTime}h</span>
-                              </td>
-                              <td style={{ padding: '8px', textAlign: 'center', background: '#f9fafb' }}>
-                                <span style={{ fontSize: '12px', fontWeight: '600', color: yesterdayData.realTime > yesterdayData.estTime ? '#dc2626' : '#059669' }}>{yesterdayData.realTime}h</span>
-                              </td>
-                              <td style={{ padding: '8px', textAlign: 'center', background: '#f9fafb' }}>
-                                <span style={{ 
-                                  fontSize: '10px', 
-                                  padding: '3px 8px', 
-                                  borderRadius: '4px',
-                                  fontWeight: '600',
-                                  background: yesterdayData.status === 'finished' ? '#dcfce7' : yesterdayData.status === 'stillInProgress' ? '#fef3c7' : '#fee2e2',
-                                  color: yesterdayData.status === 'finished' ? '#059669' : yesterdayData.status === 'stillInProgress' ? '#d97706' : '#dc2626'
-                                }}>
-                                  {yesterdayData.status === 'finished' ? '✓ Done' : yesterdayData.status === 'stillInProgress' ? '→ Cont.' : '✕ Block'}
-                                </span>
-                              </td>
-                              
-                              {/* Today Task */}
-                              <td style={{ padding: '8px 12px', borderLeft: '2px solid #059669' }}>
-                                {hasWork ? (
-                                  <>
-                                    <div style={{ fontSize: '12px', fontWeight: '500', color: '#374151' }}>{todayData.task}</div>
-                                    <div style={{ fontSize: '10px', color: '#9ca3af' }}>{todayData.villa}</div>
-                                  </>
-                                ) : (
-                                  <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '500' }}>⚠️ No task assigned</span>
-                                )}
-                              </td>
-                              <td style={{ padding: '8px', textAlign: 'center' }}>
-                                {hasWork && <span style={{ fontSize: '12px', color: '#6b7280' }}>{todayData.estTime}h</span>}
-                              </td>
-                              <td style={{ padding: '8px', textAlign: 'center' }}>
-                                {hasWork && (
-                                  <input 
-                                    type="number" 
-                                    step="0.5" 
-                                    min="0" 
-                                    value={todayTask?.realTime || ''} 
-                                    onChange={e => setBuildingTasks(prev => prev.map(t => t.id === todayTask?.id ? { ...t, realTime: parseFloat(e.target.value) || '' } : t))}
-                                    placeholder="0"
-                                    style={{ width: '50px', padding: '4px', border: '1px solid #e5e7eb', borderRadius: '4px', textAlign: 'center', fontSize: '12px' }} 
-                                  />
-                                )}
-                              </td>
-                              <td style={{ padding: '8px', textAlign: 'center' }}>
-                                {hasWork && (
-                                  <select 
-                                    value={todayData.status} 
-                                    onChange={e => setBuildingTasks(prev => prev.map(t => t.id === todayTask?.id ? { ...t, scheduleStatus: e.target.value } : t))}
-                                    style={{ 
-                                      padding: '4px 8px', 
-                                      fontSize: '11px', 
-                                      border: '1px solid #e5e7eb', 
-                                      borderRadius: '4px',
-                                      background: todayData.status === 'finished' ? '#dcfce7' : todayData.status === 'stillInProgress' ? '#fef3c7' : todayData.status === 'blocked' ? '#fee2e2' : '#fff',
-                                      color: todayData.status === 'finished' ? '#059669' : todayData.status === 'stillInProgress' ? '#d97706' : todayData.status === 'blocked' ? '#dc2626' : '#6b7280',
-                                      fontWeight: '600',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    <option value="pending">Pending</option>
-                                    <option value="finished">✓ Finished</option>
-                                    <option value="stillInProgress">→ In Progress</option>
-                                    <option value="blocked">✕ Blocked</option>
-                                  </select>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot>
-                        <tr style={{ background: '#f9fafb', fontWeight: '600' }}>
-                          <td style={{ padding: '12px 16px', fontSize: '12px', color: '#6b7280' }}>TOTALS</td>
-                          <td style={{ padding: '8px 12px', borderLeft: '2px solid #e5e7eb', background: '#f3f4f6' }}></td>
-                          <td style={{ padding: '8px', textAlign: 'center', background: '#f3f4f6', fontSize: '12px', color: '#6b7280' }}>
-                            {allWorkers.reduce((sum, w, idx) => sum + ([4, 8, 6, 8, 4][idx % 5]), 0)}h
-                          </td>
-                          <td style={{ padding: '8px', textAlign: 'center', background: '#f3f4f6', fontSize: '12px', color: '#059669' }}>
-                            {allWorkers.reduce((sum, w, idx) => sum + ([4.5, 7.5, 6, 9, 3.5][idx % 5]), 0)}h
-                          </td>
-                          <td style={{ padding: '8px', textAlign: 'center', background: '#f3f4f6' }}></td>
-                          <td style={{ padding: '8px 12px', borderLeft: '2px solid #059669' }}></td>
-                          <td style={{ padding: '8px', textAlign: 'center', fontSize: '12px', color: '#6b7280' }}>
-                            {buildingTasks.filter(t => t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)').reduce((sum, t) => sum + (parseFloat(t.duration) || 0), 0)}h
-                          </td>
-                          <td style={{ padding: '8px', textAlign: 'center', fontSize: '12px', color: '#059669' }}>
-                            {buildingTasks.filter(t => t.realTime).reduce((sum, t) => sum + (t.realTime || 0), 0)}h
-                          </td>
-                          <td style={{ padding: '8px' }}></td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                {/* 3-Day View */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '16px' }}>
+                  {/* YESTERDAY */}
+                  <div style={{ background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 16px', background: '#f3f4f6', borderBottom: '1px solid #e5e7eb' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Yesterday</div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                        {yesterday.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </div>
+                    </div>
+                    <div style={{ padding: '12px', maxHeight: '500px', overflowY: 'auto' }}>
+                      {yesterdayTasks.map(task => <TaskCard key={task.id} task={task} day="yesterday" isYesterday={true} />)}
+                    </div>
+                  </div>
+                  
+                  {/* TODAY */}
+                  <div style={{ background: '#fff', borderRadius: '12px', border: '2px solid #059669', overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 16px', background: '#ecfdf5', borderBottom: '1px solid #059669' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#059669', textTransform: 'uppercase' }}>Today</div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                        {new Date(todayStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </div>
+                    </div>
+                    <div style={{ padding: '12px', maxHeight: '500px', overflowY: 'auto' }}>
+                      {activeTasks.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '24px', color: '#9ca3af' }}>
+                          <div style={{ fontSize: '13px' }}>No tasks with workers assigned</div>
+                        </div>
+                      ) : (
+                        activeTasks.map(task => <TaskCard key={task.id} task={task} day="today" isYesterday={false} />)
+                      )}
+                      
+                      {/* Assign Task Button */}
+                      {availableTasks.length > 0 && (
+                        <div style={{ marginTop: '12px', padding: '12px', background: '#f0fdf4', borderRadius: '8px', border: '1px dashed #86efac' }}>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#059669', marginBottom: '8px' }}>+ Assign Task from Building Sequence</div>
+                          <select 
+                            onChange={e => {
+                              if (e.target.value) {
+                                const task = buildingTasks.find(t => t.id === Number(e.target.value));
+                                if (task) setActiveComments(task.id);
+                                e.target.value = '';
+                              }
+                            }}
+                            style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '12px', background: '#fff' }}
+                          >
+                            <option value="">Select a task to assign workers...</option>
+                            {availableTasks.map(t => <option key={t.id} value={t.id}>{t.step} - {t.villa}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* TOMORROW */}
+                  <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 16px', background: '#faf5ff', borderBottom: '1px solid #e5e7eb' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#7c3aed', textTransform: 'uppercase' }}>Tomorrow</div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                        {tomorrow.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </div>
+                    </div>
+                    <div style={{ padding: '12px', maxHeight: '500px', overflowY: 'auto' }}>
+                      {activeTasks.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '24px', color: '#9ca3af' }}>
+                          <div style={{ fontSize: '13px' }}>No tasks planned</div>
+                        </div>
+                      ) : (
+                        activeTasks.slice(0, 3).map(task => (
+                          <div key={task.id} style={{ 
+                            background: '#f9fafb', 
+                            borderRadius: '8px', 
+                            border: '1px solid #e5e7eb',
+                            padding: '10px',
+                            marginBottom: '8px',
+                            opacity: 0.8
+                          }}>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>{task.step}</div>
+                            <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '6px' }}>{task.task} • {task.villa}</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                              {[...(task.skilledWorkers || []), ...(task.unskilledWorkers || [])].map((w, i) => (
+                                <span key={i} style={{ fontSize: '10px', padding: '2px 6px', background: '#e5e7eb', borderRadius: '4px', color: '#6b7280' }}>{w}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                      
+                      {/* Assign for Tomorrow */}
+                      {availableTasks.length > 0 && (
+                        <div style={{ marginTop: '12px', padding: '12px', background: '#faf5ff', borderRadius: '8px', border: '1px dashed #c4b5fd' }}>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#7c3aed', marginBottom: '8px' }}>+ Plan for Tomorrow</div>
+                          <select 
+                            onChange={e => {
+                              if (e.target.value) {
+                                const task = buildingTasks.find(t => t.id === Number(e.target.value));
+                                if (task) setActiveComments(task.id);
+                                e.target.value = '';
+                              }
+                            }}
+                            style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '12px', background: '#fff' }}
+                          >
+                            <option value="">Select a task...</option>
+                            {availableTasks.map(t => <option key={t.id} value={t.id}>{t.step} - {t.villa}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
+                {/* Unassigned Workers Alert */}
+                {unassignedWorkers.length > 0 && (
+                  <div style={{ background: '#fef2f2', borderRadius: '12px', border: '1px solid #fecaca', padding: '16px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#dc2626', marginBottom: '12px' }}>
+                      ⚠️ {unassignedWorkers.length} Workers Without Tasks Today
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {unassignedWorkers.map(w => (
+                        <div key={w.id} style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '6px',
+                          padding: '6px 10px', 
+                          background: '#fff', 
+                          borderRadius: '6px',
+                          border: '1px solid #fecaca'
+                        }}>
+                          <div style={{ 
+                            width: '24px', 
+                            height: '24px', 
+                            borderRadius: '50%', 
+                            background: w.type === 'skilled' ? '#1d4ed8' : '#6b7280', 
+                            color: '#fff', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            fontSize: '10px', 
+                            fontWeight: '600' 
+                          }}>{w.name.charAt(0)}</div>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: '500' }}>{w.name}</div>
+                            <div style={{ fontSize: '10px', color: w.type === 'skilled' ? '#1d4ed8' : '#6b7280' }}>{w.type}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Legend */}
                 <div style={{ display: 'flex', gap: '24px', fontSize: '12px', color: '#6b7280' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #3b82f6' }} /> Multi-worker task (prioritized)
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#1d4ed8' }} /> Skilled Worker
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#6b7280' }} /> Unskilled Worker
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: '#dc2626' }}>Red Real Time</span> = Over estimated
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: '#059669' }}>Green Real Time</span> = Within estimated
                   </div>
                 </div>
               </div>
