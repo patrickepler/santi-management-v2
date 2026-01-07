@@ -1050,7 +1050,7 @@ export default function Home() {
         </>)}
 
         {/* Building Sequence */}
-        {activeNav.startsWith('sequence-') && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>{currentVilla}</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredBuildingTasks.length} steps {!currentUser.isAdmin && <span style={{ fontSize: '12px', color: '#f59e0b' }}>(Your edits require approval)</span>}</p></div><div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}><input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: '160px', padding: '10px 16px', border: '1px solid #e5e7eb', borderRadius: '10px' }} /><button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add Phase</button>{currentUser.isAdmin && <button type="button" onClick={() => setAddSequenceModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add Sequence</button>}</div></div>
+        {activeNav.startsWith('sequence-') && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>{currentVilla}</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredBuildingTasks.length} steps {!currentUser.isAdmin && <span style={{ fontSize: '12px', color: '#f59e0b' }}>(Your edits require approval)</span>}</p></div><div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}><input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: '160px', padding: '10px 16px', border: '1px solid #e5e7eb', borderRadius: '10px' }} /><button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add Phase</button></div></div>
           {Object.entries(grouped).map(([subCat, catTasks]) => (<div key={subCat} style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>{subCat}</h3><span style={{ fontSize: '12px', color: '#6b7280' }}>{catTasks.length} steps</span></div><button type="button" onClick={() => setAddStepModal(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: '#fafafa' }}>{['', 'Readiness', 'Status', 'Task', 'Step', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; return (<tr key={t.id} draggable onDragStart={(e) => handleRowDragStart(e, t, subCat)} onDragOver={(e) => handleRowDragOver(e, t)} onDrop={(e) => handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '30px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div></td><td style={{ padding: '8px' }}>{r.type !== 'sequenced' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={options.task[subCat] || []} onChange={v => editBuildingTask(t.id, 'task', v)} placeholder="Task" /></td><td style={{ padding: '8px' }}><EditableCell value={t.step} onChange={v => editBuildingTask(t.id, 'step', v)} placeholder="Step" /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => editBuildingTask(t.id, 'notes', v)} placeholder="Notes" /></td><td style={{ padding: '8px' }}><input type="date" value={t.earliestStart || ''} onChange={e => editBuildingTask(t.id, 'earliestStart', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => editBuildingTask(t.id, 'expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.duration} onChange={v => editBuildingTask(t.id, 'duration', v)} placeholder="0:00" /></td><td style={{ padding: '8px' }}><MultiSelect values={t.skilledWorkers} options={options.skilledWorker} onChange={v => editBuildingTask(t.id, 'skilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><MultiSelect values={t.unskilledWorkers} options={options.unskilledWorker} onChange={v => editBuildingTask(t.id, 'unskilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button></td><td style={{ padding: '8px' }}><button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button></td></tr>); })}</tbody></table></div></div>))}
         </>)}
 
@@ -1059,7 +1059,7 @@ export default function Home() {
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}>
             <div>
               <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Daily Worker Schedule</h1>
-              <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Track task completion and worker assignments</p>
+              <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Track task completion and worker time</p>
             </div>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <button type="button" onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d.toISOString().split('T')[0]); }} style={{ padding: '8px 12px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>←</button>
@@ -1068,39 +1068,36 @@ export default function Home() {
             </div>
           </div>
           
-          {/* 3-Day View: Previous, Selected, Next */}
+          {/* Worker-Row Based Schedule */}
           {(() => {
-            const prevDate = new Date(selectedDate); prevDate.setDate(prevDate.getDate() - 1);
-            const nextDate = new Date(selectedDate); nextDate.setDate(nextDate.getDate() + 1);
-            const dates = [
-              { date: prevDate.toISOString().split('T')[0], label: 'Previous Day', isPast: true },
-              { date: selectedDate, label: 'Selected Day', isToday: selectedDate === TODAY },
-              { date: nextDate.toISOString().split('T')[0], label: 'Next Day', isFuture: true }
-            ];
+            const yesterday = new Date(selectedDate); yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            const todayStr = selectedDate;
             
-            // Get tasks with workers assigned
-            const getTasksForDisplay = () => {
-              return buildingTasks.filter(t => 
-                (t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)') &&
-                ((t.skilledWorkers || []).length > 0 || (t.unskilledWorkers || []).length > 0)
-              );
+            // Get all active workers
+            const allWorkers = workforce.filter(w => w.status === 'active');
+            
+            // Get tasks with assignments
+            const getWorkerTasks = (workerName, workerType) => {
+              return buildingTasks.filter(t => {
+                const workers = workerType === 'skilled' ? (t.skilledWorkers || []) : (t.unskilledWorkers || []);
+                return workers.includes(workerName) && 
+                  (t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)' || t.status === 'Done');
+              });
             };
-            
-            const tasksWithWorkers = getTasksForDisplay();
-            
-            // Get unassigned workers
-            const assignedSkilledNames = [...new Set(tasksWithWorkers.flatMap(t => t.skilledWorkers || []))];
-            const assignedUnskilledNames = [...new Set(tasksWithWorkers.flatMap(t => t.unskilledWorkers || []))];
-            const unassignedWorkers = workforce.filter(w => 
-              w.status === 'active' && 
-              ((w.type === 'skilled' && !assignedSkilledNames.includes(w.name)) ||
-               (w.type === 'unskilled' && !assignedUnskilledNames.includes(w.name)))
-            );
             
             // Calculate stats
             const finishedCount = buildingTasks.filter(t => t.scheduleStatus === 'finished').length;
             const inProgressCount = buildingTasks.filter(t => t.scheduleStatus === 'stillInProgress').length;
             const blockedCount = buildingTasks.filter(t => t.scheduleStatus === 'blocked').length;
+            
+            // Workers with no tasks today
+            const workersWithTasks = new Set();
+            buildingTasks.filter(t => t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)').forEach(t => {
+              (t.skilledWorkers || []).forEach(w => workersWithTasks.add(w));
+              (t.unskilledWorkers || []).forEach(w => workersWithTasks.add(w));
+            });
+            const unassignedCount = allWorkers.filter(w => !workersWithTasks.has(w.name)).length;
             
             return (
               <div style={{ display: 'grid', gap: '24px' }}>
@@ -1119,188 +1116,204 @@ export default function Home() {
                     <div style={{ fontSize: '12px', color: '#6b7280' }}>Blocked</div>
                   </div>
                   <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '16px' }}>
-                    <div style={{ fontSize: '24px', fontWeight: '700', color: unassignedWorkers.length > 0 ? '#dc2626' : '#059669' }}>{unassignedWorkers.length}</div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: unassignedCount > 0 ? '#dc2626' : '#059669' }}>{unassignedCount}</div>
                     <div style={{ fontSize: '12px', color: '#6b7280' }}>Unassigned Workers</div>
                   </div>
                 </div>
                 
-                {/* 3-Day Task View */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '16px' }}>
-                  {dates.map((dayInfo, dayIdx) => {
-                    const isSelected = dayIdx === 1;
-                    return (
-                      <div key={dayInfo.date} style={{ background: '#fff', borderRadius: '12px', border: isSelected ? '2px solid #059669' : '1px solid #e5e7eb', overflow: 'hidden' }}>
-                        <div style={{ padding: '12px 16px', background: isSelected ? '#ecfdf5' : dayInfo.isPast ? '#f9fafb' : '#fff', borderBottom: '1px solid #e5e7eb' }}>
-                          <div style={{ fontSize: '11px', fontWeight: '600', color: isSelected ? '#059669' : '#6b7280', textTransform: 'uppercase' }}>
-                            {dayInfo.isPast ? 'Yesterday' : dayInfo.isFuture ? 'Tomorrow' : dayInfo.isToday ? 'Today' : dayInfo.label}
-                          </div>
-                          <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
-                            {new Date(dayInfo.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                          </div>
-                        </div>
-                        
-                        <div style={{ padding: '12px', maxHeight: isSelected ? 'none' : '400px', overflowY: 'auto' }}>
-                          {tasksWithWorkers.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '24px', color: '#9ca3af' }}>
-                              <div style={{ fontSize: '13px' }}>No tasks assigned</div>
-                            </div>
-                          ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                              {tasksWithWorkers.map(task => {
-                                const allWorkers = [
-                                  ...(task.skilledWorkers || []).map(name => ({ name, type: 'skilled' })),
-                                  ...(task.unskilledWorkers || []).map(name => ({ name, type: 'unskilled' }))
-                                ];
-                                const taskStatus = task.scheduleStatus || 'pending';
-                                
-                                return (
-                                  <div key={task.id} style={{ 
-                                    background: taskStatus === 'finished' ? '#f0fdf4' : taskStatus === 'blocked' ? '#fef2f2' : taskStatus === 'stillInProgress' ? '#fefce8' : '#f9fafb',
-                                    borderRadius: '8px', 
-                                    padding: '10px',
-                                    border: taskStatus === 'finished' ? '1px solid #bbf7d0' : taskStatus === 'blocked' ? '1px solid #fecaca' : taskStatus === 'stillInProgress' ? '1px solid #fef08a' : '1px solid #e5e7eb'
-                                  }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                                      <div>
-                                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#1f2937' }}>{task.step}</div>
-                                        <div style={{ fontSize: '10px', color: '#6b7280' }}>{task.task} • {task.villa}</div>
-                                      </div>
-                                      {task.duration && <span style={{ fontSize: '10px', color: '#6b7280' }}>{task.duration}h</span>}
-                                    </div>
-                                    
-                                    {/* Workers */}
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: isSelected ? '8px' : '0' }}>
-                                      {allWorkers.map((w, wi) => (
-                                        <span key={wi} style={{ 
-                                          fontSize: '10px', 
-                                          padding: '2px 6px', 
-                                          borderRadius: '4px',
-                                          background: w.type === 'skilled' ? '#dbeafe' : '#f3f4f6',
-                                          color: w.type === 'skilled' ? '#1d4ed8' : '#6b7280'
-                                        }}>
-                                          {w.name}
-                                        </span>
-                                      ))}
-                                    </div>
-                                    
-                                    {/* Status Buttons - Only for selected day */}
-                                    {isSelected && (
-                                      <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
-                                        <button 
-                                          type="button"
-                                          onClick={() => setBuildingTasks(prev => prev.map(t => t.id === task.id ? { ...t, scheduleStatus: 'finished' } : t))}
-                                          style={{ 
-                                            flex: 1, 
-                                            padding: '4px 8px', 
-                                            fontSize: '10px', 
-                                            fontWeight: '600',
-                                            border: 'none', 
-                                            borderRadius: '4px', 
-                                            cursor: 'pointer',
-                                            background: taskStatus === 'finished' ? '#059669' : '#e5e7eb',
-                                            color: taskStatus === 'finished' ? '#fff' : '#6b7280'
-                                          }}
-                                        >✓ Finished</button>
-                                        <button 
-                                          type="button"
-                                          onClick={() => setBuildingTasks(prev => prev.map(t => t.id === task.id ? { ...t, scheduleStatus: 'stillInProgress' } : t))}
-                                          style={{ 
-                                            flex: 1, 
-                                            padding: '4px 8px', 
-                                            fontSize: '10px', 
-                                            fontWeight: '600',
-                                            border: 'none', 
-                                            borderRadius: '4px', 
-                                            cursor: 'pointer',
-                                            background: taskStatus === 'stillInProgress' ? '#f59e0b' : '#e5e7eb',
-                                            color: taskStatus === 'stillInProgress' ? '#fff' : '#6b7280'
-                                          }}
-                                        >↻ In Progress</button>
-                                        <button 
-                                          type="button"
-                                          onClick={() => setBuildingTasks(prev => prev.map(t => t.id === task.id ? { ...t, scheduleStatus: 'blocked' } : t))}
-                                          style={{ 
-                                            flex: 1, 
-                                            padding: '4px 8px', 
-                                            fontSize: '10px', 
-                                            fontWeight: '600',
-                                            border: 'none', 
-                                            borderRadius: '4px', 
-                                            cursor: 'pointer',
-                                            background: taskStatus === 'blocked' ? '#dc2626' : '#e5e7eb',
-                                            color: taskStatus === 'blocked' ? '#fff' : '#6b7280'
-                                          }}
-                                        >✕ Blocked</button>
-                                      </div>
-                                    )}
-                                    
-                                    {/* Status Badge for non-selected days */}
-                                    {!isSelected && taskStatus !== 'pending' && (
-                                      <div style={{ marginTop: '6px' }}>
-                                        <span style={{ 
-                                          fontSize: '9px', 
-                                          padding: '2px 6px', 
-                                          borderRadius: '4px',
-                                          background: taskStatus === 'finished' ? '#059669' : taskStatus === 'stillInProgress' ? '#f59e0b' : '#dc2626',
-                                          color: '#fff',
-                                          fontWeight: '600'
-                                        }}>
-                                          {taskStatus === 'finished' ? 'FINISHED' : taskStatus === 'stillInProgress' ? 'IN PROGRESS →' : 'BLOCKED'}
-                                        </span>
-                                      </div>
-                                    )}
+                {/* Worker Schedule Table */}
+                <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1000px' }}>
+                      <thead>
+                        <tr style={{ background: '#f9fafb' }}>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', width: '180px', borderBottom: '1px solid #e5e7eb' }}>WORKER</th>
+                          <th colSpan="4" style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', borderBottom: '1px solid #e5e7eb', borderLeft: '2px solid #e5e7eb', background: '#f3f4f6' }}>
+                            YESTERDAY - {new Date(yesterdayStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </th>
+                          <th colSpan="4" style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#059669', textAlign: 'center', borderBottom: '1px solid #e5e7eb', borderLeft: '2px solid #059669', background: '#ecfdf5' }}>
+                            TODAY - {new Date(todayStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </th>
+                        </tr>
+                        <tr style={{ background: '#fafafa' }}>
+                          <th style={{ padding: '8px 16px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}></th>
+                          <th style={{ padding: '8px 12px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'left', borderBottom: '1px solid #e5e7eb', borderLeft: '2px solid #e5e7eb' }}>TASK</th>
+                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '60px' }}>EST</th>
+                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '60px' }}>REAL</th>
+                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '100px' }}>STATUS</th>
+                          <th style={{ padding: '8px 12px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'left', borderBottom: '1px solid #e5e7eb', borderLeft: '2px solid #059669' }}>TASK</th>
+                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '60px' }}>EST</th>
+                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '60px' }}>REAL</th>
+                          <th style={{ padding: '8px 8px', fontSize: '10px', fontWeight: '600', color: '#9ca3af', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '100px' }}>STATUS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allWorkers.map((worker, idx) => {
+                          const workerTasks = getWorkerTasks(worker.name, worker.type);
+                          const activeTasks = workerTasks.filter(t => t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)');
+                          const hasWork = activeTasks.length > 0;
+                          
+                          // Yesterday dummy data (completed)
+                          const yesterdayData = worker.yesterdayData || {
+                            task: idx < 5 ? ['Prefab Re-Bar', 'Set up Formwork', 'Set Re-Bar Inside', 'Brace Formwork', 'Site Cleanup'][idx] : 'General Labor',
+                            villa: 'Villa 3',
+                            estTime: [4, 8, 6, 8, 4][idx % 5],
+                            realTime: [4.5, 7.5, 6, 9, 3.5][idx % 5],
+                            status: ['finished', 'finished', 'finished', 'stillInProgress', 'finished'][idx % 5]
+                          };
+                          
+                          // Today data
+                          const todayTask = activeTasks[0];
+                          const todayData = {
+                            task: todayTask ? `${todayTask.step}` : '',
+                            villa: todayTask?.villa || '',
+                            estTime: todayTask ? parseFloat(todayTask.duration) || 0 : 0,
+                            realTime: todayTask?.realTime || '',
+                            status: todayTask?.scheduleStatus || 'pending'
+                          };
+                          
+                          return (
+                            <tr key={worker.id} style={{ borderBottom: '1px solid #f3f4f6', background: !hasWork ? '#fef2f2' : 'transparent' }}>
+                              {/* Worker Name */}
+                              <td style={{ padding: '12px 16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ 
+                                    width: '36px', 
+                                    height: '36px', 
+                                    borderRadius: '50%', 
+                                    background: worker.type === 'skilled' ? '#1d4ed8' : '#6b7280', 
+                                    color: '#fff', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    fontSize: '14px', 
+                                    fontWeight: '600' 
+                                  }}>{worker.name.charAt(0).toUpperCase()}</div>
+                                  <div>
+                                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{worker.name}</div>
+                                    <div style={{ fontSize: '11px', color: worker.type === 'skilled' ? '#1d4ed8' : '#6b7280' }}>{worker.type} • {worker.hourlyRate} THB/hr</div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                                </div>
+                              </td>
+                              
+                              {/* Yesterday Task */}
+                              <td style={{ padding: '8px 12px', borderLeft: '2px solid #e5e7eb', background: '#f9fafb' }}>
+                                <div style={{ fontSize: '12px', fontWeight: '500', color: '#374151' }}>{yesterdayData.task}</div>
+                                <div style={{ fontSize: '10px', color: '#9ca3af' }}>{yesterdayData.villa}</div>
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'center', background: '#f9fafb' }}>
+                                <span style={{ fontSize: '12px', color: '#6b7280' }}>{yesterdayData.estTime}h</span>
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'center', background: '#f9fafb' }}>
+                                <span style={{ fontSize: '12px', fontWeight: '600', color: yesterdayData.realTime > yesterdayData.estTime ? '#dc2626' : '#059669' }}>{yesterdayData.realTime}h</span>
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'center', background: '#f9fafb' }}>
+                                <span style={{ 
+                                  fontSize: '10px', 
+                                  padding: '3px 8px', 
+                                  borderRadius: '4px',
+                                  fontWeight: '600',
+                                  background: yesterdayData.status === 'finished' ? '#dcfce7' : yesterdayData.status === 'stillInProgress' ? '#fef3c7' : '#fee2e2',
+                                  color: yesterdayData.status === 'finished' ? '#059669' : yesterdayData.status === 'stillInProgress' ? '#d97706' : '#dc2626'
+                                }}>
+                                  {yesterdayData.status === 'finished' ? '✓ Done' : yesterdayData.status === 'stillInProgress' ? '→ Cont.' : '✕ Block'}
+                                </span>
+                              </td>
+                              
+                              {/* Today Task */}
+                              <td style={{ padding: '8px 12px', borderLeft: '2px solid #059669' }}>
+                                {hasWork ? (
+                                  <>
+                                    <div style={{ fontSize: '12px', fontWeight: '500', color: '#374151' }}>{todayData.task}</div>
+                                    <div style={{ fontSize: '10px', color: '#9ca3af' }}>{todayData.villa}</div>
+                                  </>
+                                ) : (
+                                  <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '500' }}>⚠️ No task assigned</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'center' }}>
+                                {hasWork && <span style={{ fontSize: '12px', color: '#6b7280' }}>{todayData.estTime}h</span>}
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'center' }}>
+                                {hasWork && (
+                                  <input 
+                                    type="number" 
+                                    step="0.5" 
+                                    min="0" 
+                                    value={todayTask?.realTime || ''} 
+                                    onChange={e => setBuildingTasks(prev => prev.map(t => t.id === todayTask?.id ? { ...t, realTime: parseFloat(e.target.value) || '' } : t))}
+                                    placeholder="0"
+                                    style={{ width: '50px', padding: '4px', border: '1px solid #e5e7eb', borderRadius: '4px', textAlign: 'center', fontSize: '12px' }} 
+                                  />
+                                )}
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'center' }}>
+                                {hasWork && (
+                                  <select 
+                                    value={todayData.status} 
+                                    onChange={e => setBuildingTasks(prev => prev.map(t => t.id === todayTask?.id ? { ...t, scheduleStatus: e.target.value } : t))}
+                                    style={{ 
+                                      padding: '4px 8px', 
+                                      fontSize: '11px', 
+                                      border: '1px solid #e5e7eb', 
+                                      borderRadius: '4px',
+                                      background: todayData.status === 'finished' ? '#dcfce7' : todayData.status === 'stillInProgress' ? '#fef3c7' : todayData.status === 'blocked' ? '#fee2e2' : '#fff',
+                                      color: todayData.status === 'finished' ? '#059669' : todayData.status === 'stillInProgress' ? '#d97706' : todayData.status === 'blocked' ? '#dc2626' : '#6b7280',
+                                      fontWeight: '600',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <option value="pending">Pending</option>
+                                    <option value="finished">✓ Finished</option>
+                                    <option value="stillInProgress">→ In Progress</option>
+                                    <option value="blocked">✕ Blocked</option>
+                                  </select>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr style={{ background: '#f9fafb', fontWeight: '600' }}>
+                          <td style={{ padding: '12px 16px', fontSize: '12px', color: '#6b7280' }}>TOTALS</td>
+                          <td style={{ padding: '8px 12px', borderLeft: '2px solid #e5e7eb', background: '#f3f4f6' }}></td>
+                          <td style={{ padding: '8px', textAlign: 'center', background: '#f3f4f6', fontSize: '12px', color: '#6b7280' }}>
+                            {allWorkers.reduce((sum, w, idx) => sum + ([4, 8, 6, 8, 4][idx % 5]), 0)}h
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'center', background: '#f3f4f6', fontSize: '12px', color: '#059669' }}>
+                            {allWorkers.reduce((sum, w, idx) => sum + ([4.5, 7.5, 6, 9, 3.5][idx % 5]), 0)}h
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'center', background: '#f3f4f6' }}></td>
+                          <td style={{ padding: '8px 12px', borderLeft: '2px solid #059669' }}></td>
+                          <td style={{ padding: '8px', textAlign: 'center', fontSize: '12px', color: '#6b7280' }}>
+                            {buildingTasks.filter(t => t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)').reduce((sum, t) => sum + (parseFloat(t.duration) || 0), 0)}h
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'center', fontSize: '12px', color: '#059669' }}>
+                            {buildingTasks.filter(t => t.realTime).reduce((sum, t) => sum + (t.realTime || 0), 0)}h
+                          </td>
+                          <td style={{ padding: '8px' }}></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
                 </div>
                 
-                {/* Unassigned Workers Alert */}
-                {unassignedWorkers.length > 0 && (
-                  <div style={{ background: '#fef2f2', borderRadius: '12px', border: '1px solid #fecaca', padding: '16px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#dc2626', marginBottom: '12px' }}>
-                      ⚠️ {unassignedWorkers.length} Workers Without Tasks
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {unassignedWorkers.map(w => (
-                        <div key={w.id} style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '6px',
-                          padding: '6px 10px', 
-                          background: '#fff', 
-                          borderRadius: '6px',
-                          border: '1px solid #fecaca'
-                        }}>
-                          <div style={{ 
-                            width: '24px', 
-                            height: '24px', 
-                            borderRadius: '50%', 
-                            background: w.type === 'skilled' ? '#1d4ed8' : '#6b7280', 
-                            color: '#fff', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
-                            fontSize: '10px', 
-                            fontWeight: '600' 
-                          }}>{w.name.charAt(0)}</div>
-                          <div>
-                            <div style={{ fontSize: '12px', fontWeight: '500' }}>{w.name}</div>
-                            <div style={{ fontSize: '10px', color: w.type === 'skilled' ? '#1d4ed8' : '#6b7280' }}>{w.type}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <p style={{ fontSize: '12px', color: '#dc2626', marginTop: '12px', marginBottom: 0 }}>
-                      → Go to Building Sequence to assign these workers to tasks
-                    </p>
+                {/* Legend */}
+                <div style={{ display: 'flex', gap: '24px', fontSize: '12px', color: '#6b7280' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#1d4ed8' }} /> Skilled Worker
                   </div>
-                )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#6b7280' }} /> Unskilled Worker
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ color: '#dc2626' }}>Red Real Time</span> = Over estimated
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ color: '#059669' }}>Green Real Time</span> = Within estimated
+                  </div>
+                </div>
               </div>
             );
           })()}
