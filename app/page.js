@@ -27,6 +27,22 @@ const initialKanbanTasks = [
   { id: 'k8', title: 'Check material inventory', assignedTo: 4, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-05' },
   { id: 'k9', title: 'Supplier price comparison', assignedTo: 3, column: 'review', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-04' },
   { id: 'k10', title: 'Follow up on rebar delivery', assignedTo: 4, column: 'waiting', dueDate: '2026-01-10', expectedArrival: '2026-01-09', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-03' },
+  // Done tasks for Patrick
+  { id: 'k11', title: 'Review Q4 budget allocation', assignedTo: 1, column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 2, actualTime: 2.5, createdAt: '2026-01-01', completedAt: '2026-01-03' },
+  { id: 'k12', title: 'Sign contractor agreements', assignedTo: 1, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 1, actualTime: 1, createdAt: '2026-01-02', completedAt: '2026-01-04' },
+  { id: 'k13', title: 'Approve villa 3 foundation plan', assignedTo: 1, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1.5, actualTime: 1, createdAt: '2026-01-03', completedAt: '2026-01-05' },
+  // Done tasks for David
+  { id: 'k14', title: 'Site inspection - Villa 3', assignedTo: 2, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 2, actualTime: 2, createdAt: '2026-01-02', completedAt: '2026-01-04' },
+  { id: 'k15', title: 'Update worker schedule', assignedTo: 2, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1, actualTime: 0.5, createdAt: '2026-01-04', completedAt: '2026-01-05' },
+  { id: 'k16', title: 'QA - Base foundation formwork', assignedTo: 2, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1.5, actualTime: 1.5, createdAt: '2026-01-03', completedAt: '2026-01-05' },
+  // Done tasks for Jean
+  { id: 'k17', title: 'Contact cement suppliers', assignedTo: 3, column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 1.5, actualTime: 2, createdAt: '2026-01-01', completedAt: '2026-01-03' },
+  { id: 'k18', title: 'Process invoice #2341', assignedTo: 3, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 0.5, actualTime: 0.5, createdAt: '2026-01-03', completedAt: '2026-01-04' },
+  { id: 'k19', title: 'Negotiate rebar pricing', assignedTo: 3, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 2, actualTime: 3, createdAt: '2026-01-02', completedAt: '2026-01-05' },
+  // Done tasks for Ball
+  { id: 'k20', title: 'Inventory count - tools', assignedTo: 4, column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 1, actualTime: 1.5, createdAt: '2026-01-02', completedAt: '2026-01-03' },
+  { id: 'k21', title: 'Order PPE equipment', assignedTo: 4, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 0.5, actualTime: 0.5, createdAt: '2026-01-03', completedAt: '2026-01-04' },
+  { id: 'k22', title: 'Track delivery - formwork materials', assignedTo: 4, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1, actualTime: 1, createdAt: '2026-01-04', completedAt: '2026-01-05' },
 ];
 
 const initialRecurringTasks = [
@@ -318,20 +334,81 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
   );
 };
 
-const RecurringTaskModal = ({ task, onClose, onSave, onDelete, users }) => {
-  const [form, setForm] = useState(task || { title: '', assignedTo: 1, frequency: 'daily', days: [], specificDates: [] });
+const RecurringTaskModal = ({ task, onClose, onSave, onDelete, users, comments, setComments, currentUser, setNotifications }) => {
+  const [form, setForm] = useState(task || { title: '', assignedTo: 1, frequency: 'daily', days: [], specificDates: [], estTime: 1, notes: '' });
+  const [newComment, setNewComment] = useState('');
   const toggleDay = (day) => setForm(f => ({ ...f, days: f.days.includes(day) ? f.days.filter(d => d !== day) : [...f.days, day] }));
+  
+  const taskComments = task?.id ? (comments[`r-${task.id}`] || []) : [];
+  
+  const handleAddComment = () => {
+    if (!newComment.trim() || !task?.id) return;
+    const comment = { id: Date.now(), taskId: `r-${task.id}`, userId: currentUser.id, text: newComment, timestamp: new Date().toISOString(), mentions: [] };
+    setComments(prev => ({ ...prev, [`r-${task.id}`]: [...(prev[`r-${task.id}`] || []), comment] }));
+    setNewComment('');
+  };
+  
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '450px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>{task ? 'Edit' : 'New'} Recurring Task</h2><button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><Icon name="x" /></button></div>
-        <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Title</label><input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
-        <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Assigned To</label><select value={form.assignedTo} onChange={e => setForm({ ...form, assignedTo: Number(e.target.value) })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>{users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div>
-        <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Frequency</label><div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>{['daily', 'weekly', 'monthly', 'specific'].map(f => <button key={f} type="button" onClick={() => setForm({ ...form, frequency: f, days: [], specificDates: [] })} style={{ padding: '8px 16px', fontSize: '13px', border: form.frequency === f ? '2px solid #059669' : '1px solid #e5e7eb', borderRadius: '8px', background: form.frequency === f ? '#ecfdf5' : '#fff', color: form.frequency === f ? '#059669' : '#6b7280', cursor: 'pointer', textTransform: 'capitalize' }}>{f}</button>)}</div></div>
-        {form.frequency === 'weekly' && <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Days</label><div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <button key={d} type="button" onClick={() => toggleDay(d)} style={{ padding: '6px 10px', fontSize: '12px', border: form.days.includes(d) ? '2px solid #059669' : '1px solid #e5e7eb', borderRadius: '6px', background: form.days.includes(d) ? '#ecfdf5' : '#fff', color: form.days.includes(d) ? '#059669' : '#6b7280', cursor: 'pointer' }}>{d}</button>)}</div></div>}
-        {form.frequency === 'monthly' && <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Day of Month</label><select value={form.days[0] || '1'} onChange={e => setForm({ ...form, days: [e.target.value] })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>{Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}</select></div>}
-        {form.frequency === 'specific' && <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Dates (comma-separated)</label><input value={form.specificDates.join(', ')} onChange={e => setForm({ ...form, specificDates: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="2026-03-01, 2026-06-01" style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>{task ? <button type="button" onClick={() => { onDelete(task.id); onClose(); }} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button> : <div />}<div style={{ display: 'flex', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { onSave(form); onClose(); }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button></div></div>
+      <div style={{ width: '100%', maxWidth: '550px', maxHeight: '90vh', background: '#fff', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '11px', padding: '4px 10px', background: '#f3e8ff', color: '#7c3aed', borderRadius: '4px', fontWeight: '600' }}>↻ Recurring</span>
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>{task?.id ? 'Edit' : 'New'} Recurring Task</h2>
+          </div>
+          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><Icon name="x" /></button>
+        </div>
+        
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+          <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Title</label><input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Assigned To</label><select value={form.assignedTo} onChange={e => setForm({ ...form, assignedTo: Number(e.target.value) })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>{users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div>
+            <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Est. Time (hours)</label><input type="number" step="0.5" min="0" value={form.estTime || ''} onChange={e => setForm({ ...form, estTime: parseFloat(e.target.value) || 0 })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
+          </div>
+          
+          <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Frequency</label><div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>{['daily', 'weekly', 'monthly', 'specific'].map(f => <button key={f} type="button" onClick={() => setForm({ ...form, frequency: f, days: [], specificDates: [] })} style={{ padding: '8px 16px', fontSize: '13px', border: form.frequency === f ? '2px solid #059669' : '1px solid #e5e7eb', borderRadius: '8px', background: form.frequency === f ? '#ecfdf5' : '#fff', color: form.frequency === f ? '#059669' : '#6b7280', cursor: 'pointer', textTransform: 'capitalize' }}>{f}</button>)}</div></div>
+          {form.frequency === 'weekly' && <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Days</label><div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <button key={d} type="button" onClick={() => toggleDay(d)} style={{ padding: '6px 10px', fontSize: '12px', border: form.days.includes(d) ? '2px solid #059669' : '1px solid #e5e7eb', borderRadius: '6px', background: form.days.includes(d) ? '#ecfdf5' : '#fff', color: form.days.includes(d) ? '#059669' : '#6b7280', cursor: 'pointer' }}>{d}</button>)}</div></div>}
+          {form.frequency === 'monthly' && <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Day of Month</label><select value={form.days[0] || '1'} onChange={e => setForm({ ...form, days: [e.target.value] })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>{Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}</select></div>}
+          {form.frequency === 'specific' && <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Dates (comma-separated)</label><input value={form.specificDates.join(', ')} onChange={e => setForm({ ...form, specificDates: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="2026-03-01, 2026-06-01" style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>}
+          
+          <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Notes</label><textarea value={form.notes || ''} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} placeholder="Add notes..." style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', resize: 'vertical' }} /></div>
+          
+          {/* Comments Section */}
+          {task?.id && (
+            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginTop: '8px' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: '#6b7280' }}>Comments ({taskComments.length})</h3>
+              <div style={{ maxHeight: '150px', overflowY: 'auto', marginBottom: '12px' }}>
+                {taskComments.length === 0 ? (
+                  <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', padding: '16px' }}>No comments yet</p>
+                ) : (
+                  taskComments.map(c => {
+                    const author = users.find(u => u.id === c.userId);
+                    return (
+                      <div key={c.id} style={{ marginBottom: '8px', padding: '10px', background: '#f9fafb', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <img src={author?.avatar} alt="" style={{ width: '20px', height: '20px', borderRadius: '50%' }} />
+                          <span style={{ fontSize: '12px', fontWeight: '600' }}>{author?.username}</span>
+                          <span style={{ fontSize: '10px', color: '#9ca3af' }}>{formatTime(c.timestamp)}</span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: '13px', color: '#374151' }}>{c.text}</p>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Add a comment..." onKeyDown={e => e.key === 'Enter' && handleAddComment()} style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px' }} />
+                <button type="button" onClick={handleAddComment} style={{ padding: '10px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Icon name="send" size={16} /></button>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
+          {task?.id ? <button type="button" onClick={() => { onDelete(task.id); onClose(); }} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button> : <div />}
+          <div style={{ display: 'flex', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { onSave(form); onClose(); }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button></div>
+        </div>
       </div>
     </div>
   );
@@ -817,7 +894,10 @@ export default function Home() {
   const navItems = [
     { id: 'taskBoard', label: 'Task Board', icon: 'kanban' }, 
     { id: 'recurring', label: 'Recurring Tasks', icon: 'repeat' }, 
-    { id: 'sequence', label: 'Building Sequence', icon: 'list', subItems: buildingSequences.map(s => ({ id: `sequence-${s.id}`, label: s.label })) }, 
+    { id: 'sequence', label: 'Building Sequence', icon: 'list', subItems: [
+      ...buildingSequences.map(s => ({ id: `sequence-${s.id}`, label: s.label })),
+      { id: 'add-sequence', label: '+ Add New Sequence', isAdd: true }
+    ]}, 
     ...(currentUser.isAdmin && pendingCount > 0 ? [{ id: 'pendingApprovals', label: `Pending Approvals (${pendingCount})`, icon: 'check' }] : []),
     { id: 'schedule', label: 'Daily Worker Schedule', icon: 'calendar' }, 
     { id: 'workers', label: 'Workforce', icon: 'users' }, 
@@ -852,17 +932,121 @@ export default function Home() {
           <button type="button" onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}><Icon name="x" size={20} /></button>
         </div>
         <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#f9fafb', borderRadius: '10px' }}><img src={currentUser.avatar} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: '13px', fontWeight: '600' }}>{currentUser.username}</div><div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'capitalize' }}>{currentUser.role}</div></div><button type="button" onClick={() => setShowNotifications(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', position: 'relative', padding: '4px' }}><Icon name="bell" size={18} />{unreadCount > 0 && <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '16px', height: '16px', background: '#dc2626', color: '#fff', borderRadius: '50%', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>{unreadCount}</span>}</button>{demoMode ? <button type="button" onClick={() => setDemoMode(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button> : <SignOutButton><button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button></SignOutButton>}</div></div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>{navItems.map(item => (<div key={item.id}><button type="button" onClick={() => { if (item.subItems) { setExpandedNav(p => p.includes(item.id) ? p.filter(x => x !== item.id) : [...p, item.id]); } else { setActiveNav(item.id); if (window.innerWidth < 768) setSidebarOpen(false); } }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: activeNav === item.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', color: activeNav === item.id ? '#059669' : '#4b5563', marginBottom: '4px' }}><Icon name={item.icon} size={18} /><span style={{ flex: 1, textAlign: 'left', fontSize: '14px', fontWeight: '500' }}>{item.label}</span>{item.subItems && <Icon name={expandedNav.includes(item.id) ? 'chevronDown' : 'chevronRight'} size={16} />}</button>{item.subItems && expandedNav.includes(item.id) && <div style={{ marginLeft: '28px', marginBottom: '8px' }}>{item.subItems.map(sub => <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '8px 12px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px' }}>{sub.label}</button>)}</div>}</div>))}</div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>{navItems.map(item => (<div key={item.id}><button type="button" onClick={() => { if (item.subItems) { setExpandedNav(p => p.includes(item.id) ? p.filter(x => x !== item.id) : [...p, item.id]); if (item.id === 'sequence') { setActiveNav('sequenceOverview'); } } else { setActiveNav(item.id); if (window.innerWidth < 768) setSidebarOpen(false); } }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: activeNav === item.id || (item.id === 'sequence' && activeNav === 'sequenceOverview') ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', color: activeNav === item.id || (item.id === 'sequence' && activeNav === 'sequenceOverview') ? '#059669' : '#4b5563', marginBottom: '4px' }}><Icon name={item.icon} size={18} /><span style={{ flex: 1, textAlign: 'left', fontSize: '14px', fontWeight: '500' }}>{item.label}</span>{item.subItems && <Icon name={expandedNav.includes(item.id) ? 'chevronDown' : 'chevronRight'} size={16} />}</button>{item.subItems && expandedNav.includes(item.id) && <div style={{ marginLeft: '28px', marginBottom: '8px' }}>{item.subItems.map(sub => sub.isAdd ? (
+          <button key={sub.id} type="button" onClick={() => setAddSequenceModal(true)} style={{ width: '100%', padding: '8px 12px', background: '#f0fdf4', border: '1px dashed #86efac', borderRadius: '6px', cursor: 'pointer', color: '#059669', fontSize: '12px', textAlign: 'left', marginTop: '8px', fontWeight: '600' }}>{sub.label}</button>
+        ) : (
+          <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '8px 12px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px' }}>{sub.label}</button>
+        ))}</div>}</div>))}</div>
       </aside>
 
       {/* Main Content */}
       <main style={{ flex: 1, overflowY: 'auto', padding: '24px', marginLeft: sidebarOpen ? '260px' : '0', paddingTop: sidebarOpen ? '24px' : '84px', transition: 'margin-left 0.3s ease' }}>
         {/* Task Board */}
-        {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{isManager && !selectedTaskUser ? 'All Tasks' : 'My Tasks'}</p></div><select value={selectedTaskUser || (isManager ? 'all' : '')} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : e.target.value ? Number(e.target.value) : null)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="">My Tasks</option>{isManager && <option value="all">All Tasks</option>}{users.filter(u => u.id !== currentUser.id).map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div><button type="button" onClick={handleAddTask} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} currentUserId={currentUser.id} />)}</div></>)}
+        {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{isManager && !selectedTaskUser ? 'All Tasks' : 'My Tasks'}</p></div><select value={selectedTaskUser || (isManager ? 'all' : '')} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : e.target.value ? Number(e.target.value) : null)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="">My Tasks</option>{isManager && <option value="all">All Tasks</option>}{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={handleAddTask} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} currentUserId={currentUser.id} />)}</div></>)}
 
         {/* Recurring Tasks */}
-        {activeNav === 'recurring' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Recurring Tasks</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredRecurring.length} tasks</p></div><select value={recurringFilter} onChange={e => setRecurringFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="all">All People</option>{users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div><button type="button" onClick={() => setRecurringModal({})} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add</button></div>
-          {['daily', 'weekly', 'monthly', 'specific'].map(freq => { const freqTasks = filteredRecurring.filter(rt => rt.frequency === freq); if (freqTasks.length === 0) return null; return (<div key={freq} style={{ marginBottom: '24px' }}><h3 style={{ fontSize: '14px', fontWeight: '600', color: '#6b7280', marginBottom: '12px', textTransform: 'capitalize' }}>{freq}</h3><div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>{freqTasks.map(rt => { const assignee = users.find(u => u.id === rt.assignedTo); return (<div key={rt.id} onClick={() => setRecurringModal(rt)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}><img src={assignee?.avatar} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%' }} /><div style={{ flex: 1 }}><div style={{ fontSize: '14px', fontWeight: '500' }}>{rt.title}</div><div style={{ fontSize: '12px', color: '#6b7280' }}>{freq === 'weekly' && rt.days.join(', ')}{freq === 'monthly' && `Day ${rt.days[0]}`}{freq === 'specific' && rt.specificDates.slice(0, 2).join(', ')}{freq === 'daily' && 'Every day'}</div></div><span style={{ fontSize: '12px', color: '#9ca3af' }}>{assignee?.username}</span></div>); })}</div></div>); })}
+        {activeNav === 'recurring' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Recurring Tasks</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredRecurring.length} tasks</p></div><select value={recurringFilter} onChange={e => setRecurringFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="all">All People</option>{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={() => setRecurringModal({})} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add</button></div>
+          {['daily', 'weekly', 'monthly', 'specific'].map(freq => { const freqTasks = filteredRecurring.filter(rt => rt.frequency === freq); if (freqTasks.length === 0) return null; return (<div key={freq} style={{ marginBottom: '24px' }}><h3 style={{ fontSize: '14px', fontWeight: '600', color: '#6b7280', marginBottom: '12px', textTransform: 'capitalize' }}>{freq} ({freqTasks.reduce((sum, rt) => sum + (rt.estTime || 0), 0)}h total)</h3><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>{freqTasks.map(rt => { const assignee = users.find(u => u.id === rt.assignedTo); const commentCount = (comments[`r-${rt.id}`] || []).length; return (<div key={rt.id} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '16px', cursor: 'pointer' }} onClick={() => setRecurringModal(rt)}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '11px', padding: '3px 8px', background: '#f3e8ff', color: '#7c3aed', borderRadius: '4px', fontWeight: '600' }}>↻ {freq}</span>
+              </div>
+              <img src={assignee?.avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
+            </div>
+            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>{rt.title}</div>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
+              {freq === 'weekly' && `Every ${rt.days.join(', ')}`}
+              {freq === 'monthly' && `Day ${rt.days[0]} of each month`}
+              {freq === 'specific' && `${rt.specificDates.length} scheduled dates`}
+              {freq === 'daily' && 'Every day'}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '12px', borderTop: '1px solid #f3f4f6' }}>
+              {rt.estTime && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280' }}>🕐 {rt.estTime}h</span>}
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280' }}>👤 {assignee?.username}</span>
+              {commentCount > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#059669' }}>💬 {commentCount}</span>}
+            </div>
+          </div>); })}</div></div>); })}
+        </>)}
+
+        {/* Building Sequences Overview */}
+        {activeNav === 'sequenceOverview' && (<>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}>
+            <div>
+              <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Building Sequences</h1>
+              <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{buildingSequences.length} sequences</p>
+            </div>
+            <button type="button" onClick={() => setAddSequenceModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Sequence</button>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+            {buildingSequences.map(seq => {
+              const seqTasks = buildingTasks.filter(t => t.villa === seq.label);
+              const doneCount = seqTasks.filter(t => t.status === 'Done').length;
+              const inProgressCount = seqTasks.filter(t => t.status === 'In Progress').length;
+              const scPendingCount = seqTasks.filter(t => t.status.includes('Supply Chain')).length;
+              const progress = seqTasks.length > 0 ? Math.round((doneCount / seqTasks.length) * 100) : 0;
+              
+              return (
+                <div key={seq.id} onClick={() => setActiveNav(`sequence-${seq.id}`)} style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e5e7eb', padding: '24px', cursor: 'pointer', transition: 'box-shadow 0.2s' }} onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'} onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>{seq.label}</h3>
+                    <span style={{ fontSize: '24px' }}>{seq.label.includes('Villa') ? '🏠' : seq.label.includes('Landscaping') ? '🌿' : '🏗️'}</span>
+                  </div>
+                  
+                  {/* Progress bar */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '12px', color: '#6b7280' }}>Progress</span>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#059669' }}>{progress}%</span>
+                    </div>
+                    <div style={{ height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #059669, #10b981)', borderRadius: '4px', transition: 'width 0.3s' }} />
+                    </div>
+                  </div>
+                  
+                  {/* Stats */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ textAlign: 'center', padding: '8px', background: '#f0fdf4', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '18px', fontWeight: '700', color: '#059669' }}>{doneCount}</div>
+                      <div style={{ fontSize: '10px', color: '#6b7280' }}>Done</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '8px', background: '#faf5ff', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '18px', fontWeight: '700', color: '#7c3aed' }}>{inProgressCount}</div>
+                      <div style={{ fontSize: '10px', color: '#6b7280' }}>Active</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '8px', background: '#fefce8', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '18px', fontWeight: '700', color: '#d97706' }}>{scPendingCount}</div>
+                      <div style={{ fontSize: '10px', color: '#6b7280' }}>SC</div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ fontSize: '12px', color: '#6b7280' }}>{seqTasks.length} total steps</div>
+                </div>
+              );
+            })}
+            
+            {/* Add New Card */}
+            <div onClick={() => setAddSequenceModal(true)} style={{ background: '#f9fafb', borderRadius: '16px', border: '2px dashed #d1d5db', padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', transition: 'border-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.borderColor = '#059669'} onMouseLeave={e => e.currentTarget.style.borderColor = '#d1d5db'}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                <Icon name="plus" size={24} color="#059669" />
+              </div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#059669', marginBottom: '4px' }}>Add New Sequence</div>
+              <div style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>Start from scratch or use a template</div>
+            </div>
+          </div>
+          
+          {/* Templates Section */}
+          <div style={{ marginTop: '32px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#6b7280' }}>Templates (Coming Soon)</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+              {['Standard Villa', 'Pool House', 'Guest House', 'Landscaping'].map(template => (
+                <div key={template} style={{ background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '16px', opacity: 0.6 }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>{template}</div>
+                  <div style={{ fontSize: '11px', color: '#9ca3af' }}>Template</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </>)}
 
         {/* Building Sequence */}
@@ -875,7 +1059,7 @@ export default function Home() {
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}>
             <div>
               <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Daily Worker Schedule</h1>
-              <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Assign workers from Building Sequence</p>
+              <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Track task completion and worker assignments</p>
             </div>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <button type="button" onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d.toISOString().split('T')[0]); }} style={{ padding: '8px 12px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>←</button>
@@ -884,101 +1068,242 @@ export default function Home() {
             </div>
           </div>
           
-          <div style={{ display: 'grid', gap: '16px' }}>
-            {/* Skilled Workers */}
-            <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-              <div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0, color: '#059669' }}>Skilled Workers</h3>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#fafafa' }}>
-                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', width: '150px' }}>WORKER</th>
-                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left' }}>ASSIGNED TASKS</th>
-                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>PLANNED</th>
-                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>ACTUAL</th>
-                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>STATUS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {workforce.filter(w => w.type === 'skilled' && w.status === 'active').map(worker => {
-                      const assignedTasks = buildingTasks.filter(t => (t.skilledWorkers || []).includes(worker.name) && (t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)'));
-                      const totalHours = assignedTasks.reduce((sum, t) => sum + (parseFloat(t.duration) || 0), 0);
-                      const hasWork = assignedTasks.length > 0;
-                      return (
-                        <tr key={worker.id} style={{ borderBottom: '1px solid #f3f4f6', background: !hasWork ? '#fef2f2' : 'transparent' }}>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#059669', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>{worker.name.charAt(0).toUpperCase()}</div>
-                              <div><div style={{ fontSize: '13px', fontWeight: '500' }}>{worker.name}</div><div style={{ fontSize: '11px', color: '#9ca3af' }}>{worker.hourlyRate} THB/hr</div></div>
+          {/* 3-Day View: Previous, Selected, Next */}
+          {(() => {
+            const prevDate = new Date(selectedDate); prevDate.setDate(prevDate.getDate() - 1);
+            const nextDate = new Date(selectedDate); nextDate.setDate(nextDate.getDate() + 1);
+            const dates = [
+              { date: prevDate.toISOString().split('T')[0], label: 'Previous Day', isPast: true },
+              { date: selectedDate, label: 'Selected Day', isToday: selectedDate === TODAY },
+              { date: nextDate.toISOString().split('T')[0], label: 'Next Day', isFuture: true }
+            ];
+            
+            // Get tasks with workers assigned
+            const getTasksForDisplay = () => {
+              return buildingTasks.filter(t => 
+                (t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)') &&
+                ((t.skilledWorkers || []).length > 0 || (t.unskilledWorkers || []).length > 0)
+              );
+            };
+            
+            const tasksWithWorkers = getTasksForDisplay();
+            
+            // Get unassigned workers
+            const assignedSkilledNames = [...new Set(tasksWithWorkers.flatMap(t => t.skilledWorkers || []))];
+            const assignedUnskilledNames = [...new Set(tasksWithWorkers.flatMap(t => t.unskilledWorkers || []))];
+            const unassignedWorkers = workforce.filter(w => 
+              w.status === 'active' && 
+              ((w.type === 'skilled' && !assignedSkilledNames.includes(w.name)) ||
+               (w.type === 'unskilled' && !assignedUnskilledNames.includes(w.name)))
+            );
+            
+            // Calculate stats
+            const finishedCount = buildingTasks.filter(t => t.scheduleStatus === 'finished').length;
+            const inProgressCount = buildingTasks.filter(t => t.scheduleStatus === 'stillInProgress').length;
+            const blockedCount = buildingTasks.filter(t => t.scheduleStatus === 'blocked').length;
+            
+            return (
+              <div style={{ display: 'grid', gap: '24px' }}>
+                {/* Performance Summary */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                  <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '16px' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#059669' }}>{finishedCount}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Finished as Planned</div>
+                  </div>
+                  <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '16px' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>{inProgressCount}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Still in Progress</div>
+                  </div>
+                  <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '16px' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#dc2626' }}>{blockedCount}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Blocked</div>
+                  </div>
+                  <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '16px' }}>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: unassignedWorkers.length > 0 ? '#dc2626' : '#059669' }}>{unassignedWorkers.length}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Unassigned Workers</div>
+                  </div>
+                </div>
+                
+                {/* 3-Day Task View */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '16px' }}>
+                  {dates.map((dayInfo, dayIdx) => {
+                    const isSelected = dayIdx === 1;
+                    return (
+                      <div key={dayInfo.date} style={{ background: '#fff', borderRadius: '12px', border: isSelected ? '2px solid #059669' : '1px solid #e5e7eb', overflow: 'hidden' }}>
+                        <div style={{ padding: '12px 16px', background: isSelected ? '#ecfdf5' : dayInfo.isPast ? '#f9fafb' : '#fff', borderBottom: '1px solid #e5e7eb' }}>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: isSelected ? '#059669' : '#6b7280', textTransform: 'uppercase' }}>
+                            {dayInfo.isPast ? 'Yesterday' : dayInfo.isFuture ? 'Tomorrow' : dayInfo.isToday ? 'Today' : dayInfo.label}
+                          </div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                            {new Date(dayInfo.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </div>
+                        </div>
+                        
+                        <div style={{ padding: '12px', maxHeight: isSelected ? 'none' : '400px', overflowY: 'auto' }}>
+                          {tasksWithWorkers.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '24px', color: '#9ca3af' }}>
+                              <div style={{ fontSize: '13px' }}>No tasks assigned</div>
                             </div>
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            {assignedTasks.length === 0 ? <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: '500' }}>⚠️ No work assigned</span> : (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                {assignedTasks.map(t => <span key={t.id} style={{ fontSize: '11px', padding: '4px 8px', background: '#ecfdf5', color: '#059669', borderRadius: '4px' }}>{t.step} ({t.villa})</span>)}
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '13px', fontWeight: '600', color: totalHours > 0 ? '#059669' : '#dc2626' }}>{totalHours > 0 ? `${totalHours}h` : '0h'}</td>
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}><input type="number" step="0.5" min="0" placeholder="0" style={{ width: '60px', padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', textAlign: 'center', fontSize: '13px' }} /></td>
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>{hasWork ? <span style={{ fontSize: '11px', padding: '4px 8px', background: '#ecfdf5', color: '#059669', borderRadius: '4px' }}>Assigned</span> : <span style={{ fontSize: '11px', padding: '4px 8px', background: '#fef2f2', color: '#dc2626', borderRadius: '4px' }}>Unassigned</span>}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Unskilled Workers */}
-            <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-              <div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0, color: '#6b7280' }}>Unskilled Workers</h3>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#fafafa' }}>
-                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', width: '150px' }}>WORKER</th>
-                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left' }}>ASSIGNED TASKS</th>
-                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>PLANNED</th>
-                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>ACTUAL</th>
-                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>STATUS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {workforce.filter(w => w.type === 'unskilled' && w.status === 'active').map(worker => {
-                      const assignedTasks = buildingTasks.filter(t => (t.unskilledWorkers || []).includes(worker.name) && (t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)'));
-                      const totalHours = assignedTasks.reduce((sum, t) => sum + (parseFloat(t.duration) || 0), 0);
-                      const hasWork = assignedTasks.length > 0;
-                      return (
-                        <tr key={worker.id} style={{ borderBottom: '1px solid #f3f4f6', background: !hasWork ? '#fef2f2' : 'transparent' }}>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#6b7280', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>{worker.name.charAt(0).toUpperCase()}</div>
-                              <div><div style={{ fontSize: '13px', fontWeight: '500' }}>{worker.name}</div><div style={{ fontSize: '11px', color: '#9ca3af' }}>{worker.hourlyRate} THB/hr</div></div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              {tasksWithWorkers.map(task => {
+                                const allWorkers = [
+                                  ...(task.skilledWorkers || []).map(name => ({ name, type: 'skilled' })),
+                                  ...(task.unskilledWorkers || []).map(name => ({ name, type: 'unskilled' }))
+                                ];
+                                const taskStatus = task.scheduleStatus || 'pending';
+                                
+                                return (
+                                  <div key={task.id} style={{ 
+                                    background: taskStatus === 'finished' ? '#f0fdf4' : taskStatus === 'blocked' ? '#fef2f2' : taskStatus === 'stillInProgress' ? '#fefce8' : '#f9fafb',
+                                    borderRadius: '8px', 
+                                    padding: '10px',
+                                    border: taskStatus === 'finished' ? '1px solid #bbf7d0' : taskStatus === 'blocked' ? '1px solid #fecaca' : taskStatus === 'stillInProgress' ? '1px solid #fef08a' : '1px solid #e5e7eb'
+                                  }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                                      <div>
+                                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#1f2937' }}>{task.step}</div>
+                                        <div style={{ fontSize: '10px', color: '#6b7280' }}>{task.task} • {task.villa}</div>
+                                      </div>
+                                      {task.duration && <span style={{ fontSize: '10px', color: '#6b7280' }}>{task.duration}h</span>}
+                                    </div>
+                                    
+                                    {/* Workers */}
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: isSelected ? '8px' : '0' }}>
+                                      {allWorkers.map((w, wi) => (
+                                        <span key={wi} style={{ 
+                                          fontSize: '10px', 
+                                          padding: '2px 6px', 
+                                          borderRadius: '4px',
+                                          background: w.type === 'skilled' ? '#dbeafe' : '#f3f4f6',
+                                          color: w.type === 'skilled' ? '#1d4ed8' : '#6b7280'
+                                        }}>
+                                          {w.name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                    
+                                    {/* Status Buttons - Only for selected day */}
+                                    {isSelected && (
+                                      <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+                                        <button 
+                                          type="button"
+                                          onClick={() => setBuildingTasks(prev => prev.map(t => t.id === task.id ? { ...t, scheduleStatus: 'finished' } : t))}
+                                          style={{ 
+                                            flex: 1, 
+                                            padding: '4px 8px', 
+                                            fontSize: '10px', 
+                                            fontWeight: '600',
+                                            border: 'none', 
+                                            borderRadius: '4px', 
+                                            cursor: 'pointer',
+                                            background: taskStatus === 'finished' ? '#059669' : '#e5e7eb',
+                                            color: taskStatus === 'finished' ? '#fff' : '#6b7280'
+                                          }}
+                                        >✓ Finished</button>
+                                        <button 
+                                          type="button"
+                                          onClick={() => setBuildingTasks(prev => prev.map(t => t.id === task.id ? { ...t, scheduleStatus: 'stillInProgress' } : t))}
+                                          style={{ 
+                                            flex: 1, 
+                                            padding: '4px 8px', 
+                                            fontSize: '10px', 
+                                            fontWeight: '600',
+                                            border: 'none', 
+                                            borderRadius: '4px', 
+                                            cursor: 'pointer',
+                                            background: taskStatus === 'stillInProgress' ? '#f59e0b' : '#e5e7eb',
+                                            color: taskStatus === 'stillInProgress' ? '#fff' : '#6b7280'
+                                          }}
+                                        >↻ In Progress</button>
+                                        <button 
+                                          type="button"
+                                          onClick={() => setBuildingTasks(prev => prev.map(t => t.id === task.id ? { ...t, scheduleStatus: 'blocked' } : t))}
+                                          style={{ 
+                                            flex: 1, 
+                                            padding: '4px 8px', 
+                                            fontSize: '10px', 
+                                            fontWeight: '600',
+                                            border: 'none', 
+                                            borderRadius: '4px', 
+                                            cursor: 'pointer',
+                                            background: taskStatus === 'blocked' ? '#dc2626' : '#e5e7eb',
+                                            color: taskStatus === 'blocked' ? '#fff' : '#6b7280'
+                                          }}
+                                        >✕ Blocked</button>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Status Badge for non-selected days */}
+                                    {!isSelected && taskStatus !== 'pending' && (
+                                      <div style={{ marginTop: '6px' }}>
+                                        <span style={{ 
+                                          fontSize: '9px', 
+                                          padding: '2px 6px', 
+                                          borderRadius: '4px',
+                                          background: taskStatus === 'finished' ? '#059669' : taskStatus === 'stillInProgress' ? '#f59e0b' : '#dc2626',
+                                          color: '#fff',
+                                          fontWeight: '600'
+                                        }}>
+                                          {taskStatus === 'finished' ? 'FINISHED' : taskStatus === 'stillInProgress' ? 'IN PROGRESS →' : 'BLOCKED'}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            {assignedTasks.length === 0 ? <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: '500' }}>⚠️ No work assigned</span> : (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                {assignedTasks.map(t => <span key={t.id} style={{ fontSize: '11px', padding: '4px 8px', background: '#f3f4f6', color: '#6b7280', borderRadius: '4px' }}>{t.step} ({t.villa})</span>)}
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '13px', fontWeight: '600', color: totalHours > 0 ? '#059669' : '#dc2626' }}>{totalHours > 0 ? `${totalHours}h` : '0h'}</td>
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}><input type="number" step="0.5" min="0" placeholder="0" style={{ width: '60px', padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', textAlign: 'center', fontSize: '13px' }} /></td>
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>{hasWork ? <span style={{ fontSize: '11px', padding: '4px 8px', background: '#ecfdf5', color: '#059669', borderRadius: '4px' }}>Assigned</span> : <span style={{ fontSize: '11px', padding: '4px 8px', background: '#fef2f2', color: '#dc2626', borderRadius: '4px' }}>Unassigned</span>}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Unassigned Workers Alert */}
+                {unassignedWorkers.length > 0 && (
+                  <div style={{ background: '#fef2f2', borderRadius: '12px', border: '1px solid #fecaca', padding: '16px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#dc2626', marginBottom: '12px' }}>
+                      ⚠️ {unassignedWorkers.length} Workers Without Tasks
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {unassignedWorkers.map(w => (
+                        <div key={w.id} style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '6px',
+                          padding: '6px 10px', 
+                          background: '#fff', 
+                          borderRadius: '6px',
+                          border: '1px solid #fecaca'
+                        }}>
+                          <div style={{ 
+                            width: '24px', 
+                            height: '24px', 
+                            borderRadius: '50%', 
+                            background: w.type === 'skilled' ? '#1d4ed8' : '#6b7280', 
+                            color: '#fff', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            fontSize: '10px', 
+                            fontWeight: '600' 
+                          }}>{w.name.charAt(0)}</div>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: '500' }}>{w.name}</div>
+                            <div style={{ fontSize: '10px', color: w.type === 'skilled' ? '#1d4ed8' : '#6b7280' }}>{w.type}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#dc2626', marginTop: '12px', marginBottom: 0 }}>
+                      → Go to Building Sequence to assign these workers to tasks
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
-          </div>
+            );
+          })()}
         </>)}
 
         {/* Workforce */}
@@ -1115,7 +1440,7 @@ export default function Home() {
 
       {/* Modals & Panels */}
       {taskModal && <TaskModal task={taskModal} onClose={() => setTaskModal(null)} onUpdate={handleTaskUpdate} onDelete={handleTaskDelete} users={users} buildingTasks={buildingTasks} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
-      {recurringModal && <RecurringTaskModal task={recurringModal.id ? recurringModal : null} onClose={() => setRecurringModal(null)} onSave={handleRecurringSave} onDelete={handleRecurringDelete} users={users} />}
+      {recurringModal && <RecurringTaskModal task={recurringModal.id ? recurringModal : null} onClose={() => setRecurringModal(null)} onSave={handleRecurringSave} onDelete={handleRecurringDelete} users={users} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
       {addStepModal && <AddStepModal isOpen={!!addStepModal} onClose={() => setAddStepModal(null)} onAdd={(data) => handleAddStep(addStepModal, data)} subCategory={addStepModal} options={options} setOptions={setOptions} />}
       {addPhaseModal && <AddPhaseModal isOpen={addPhaseModal} onClose={() => setAddPhaseModal(false)} onAdd={handleAddPhase} villa={currentVilla} options={options} />}
       {workerModal && <WorkerModal worker={workerModal.id ? workerModal : null} onClose={() => setWorkerModal(null)} onSave={(w) => { if (w.id && workforce.find(x => x.id === w.id)) { setWorkforce(prev => prev.map(x => x.id === w.id ? w : x)); } else { setWorkforce(prev => [...prev, w]); } }} onDelete={(id) => setWorkforce(prev => prev.filter(w => w.id !== id))} options={options} setOptions={setOptions} />}
