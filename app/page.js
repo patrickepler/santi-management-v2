@@ -443,18 +443,92 @@ const AddStepModal = ({ isOpen, onClose, onAdd, subCategory, options, setOptions
 };
 
 // ============ ADD PHASE MODAL ============
-const AddPhaseModal = ({ isOpen, onClose, onAdd, villa, options }) => {
+const AddPhaseModal = ({ isOpen, onClose, onAdd, villa, options, setOptions }) => {
   const [mainCat, setMainCat] = useState('');
   const [subCat, setSubCat] = useState('');
+  const [showNewMainCat, setShowNewMainCat] = useState(false);
+  const [showNewSubCat, setShowNewSubCat] = useState(false);
+  const [newMainCat, setNewMainCat] = useState('');
+  const [newSubCat, setNewSubCat] = useState('');
+  
   if (!isOpen) return null;
-  const subCatOptions = options.subCategory[mainCat] || [];
+  const subCatOptions = mainCat && options.subCategory[mainCat] ? options.subCategory[mainCat] : [];
+  
+  const handleAddNewMainCat = () => {
+    if (newMainCat.trim()) {
+      const catName = newMainCat.trim();
+      setOptions(prev => ({
+        ...prev,
+        mainCategory: [...prev.mainCategory, catName],
+        subCategory: { ...prev.subCategory, [catName]: [] }
+      }));
+      setMainCat(catName);
+      setNewMainCat('');
+      setShowNewMainCat(false);
+    }
+  };
+  
+  const handleAddNewSubCat = () => {
+    if (newSubCat.trim() && mainCat) {
+      const subName = newSubCat.trim();
+      setOptions(prev => ({
+        ...prev,
+        subCategory: { 
+          ...prev.subCategory, 
+          [mainCat]: [...(prev.subCategory[mainCat] || []), subName] 
+        }
+      }));
+      setSubCat(subName);
+      setNewSubCat('');
+      setShowNewSubCat(false);
+    }
+  };
+  
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+      <div style={{ width: '100%', maxWidth: '450px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
         <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600' }}>Add Phase to {villa}</h2>
-        <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Main Category</label><select value={mainCat} onChange={e => { setMainCat(e.target.value); setSubCat(''); }} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}><option value="">Select...</option>{options.mainCategory.map(m => <option key={m} value={m}>{m}</option>)}</select></div>
-        <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Sub-Category (Phase)</label><select value={subCat} onChange={e => setSubCat(e.target.value)} disabled={!mainCat} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}><option value="">Select...</option>{subCatOptions.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { if (mainCat && subCat) { onAdd({ mainCat, subCat }); onClose(); setMainCat(''); setSubCat(''); } }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Add Phase</button></div>
+        
+        {/* Main Category */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Main Category</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <select value={mainCat} onChange={e => { setMainCat(e.target.value); setSubCat(''); }} style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>
+              <option value="">Select or add new...</option>
+              {options.mainCategory.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <button type="button" onClick={() => setShowNewMainCat(!showNewMainCat)} style={{ padding: '10px 14px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#059669' }}>+ New</button>
+          </div>
+          {showNewMainCat && (
+            <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+              <input value={newMainCat} onChange={e => setNewMainCat(e.target.value)} placeholder="e.g., 5 Roofing" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
+              <button type="button" onClick={handleAddNewMainCat} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Add</button>
+            </div>
+          )}
+        </div>
+        
+        {/* Sub-Category (Phase) */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Sub-Category (Phase)</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <select value={subCat} onChange={e => setSubCat(e.target.value)} disabled={!mainCat} style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', opacity: mainCat ? 1 : 0.5 }}>
+              <option value="">Select or add new...</option>
+              {subCatOptions.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <button type="button" onClick={() => setShowNewSubCat(!showNewSubCat)} disabled={!mainCat} style={{ padding: '10px 14px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: mainCat ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: '600', color: '#059669', opacity: mainCat ? 1 : 0.5 }}>+ New</button>
+          </div>
+          {showNewSubCat && mainCat && (
+            <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+              <input value={newSubCat} onChange={e => setNewSubCat(e.target.value)} placeholder="e.g., Tile Installation" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
+              <button type="button" onClick={handleAddNewSubCat} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Add</button>
+            </div>
+          )}
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
+          <button type="button" onClick={() => { if (mainCat && subCat) { onAdd({ mainCat, subCat }); onClose(); setMainCat(''); setSubCat(''); } }} disabled={!mainCat || !subCat} style={{ padding: '10px 20px', background: mainCat && subCat ? '#059669' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', cursor: mainCat && subCat ? 'pointer' : 'not-allowed' }}>Add Phase</button>
+        </div>
       </div>
     </div>
   );
@@ -516,17 +590,66 @@ const WorkerModal = ({ worker, onClose, onSave, onDelete, options, setOptions })
 // ============ ADD SEQUENCE MODAL ============
 const AddSequenceModal = ({ onClose, onAdd }) => {
   const [name, setName] = useState('');
+  const [fromTemplate, setFromTemplate] = useState('');
+  
+  const templates = [
+    { id: 'villa', name: 'Standard Villa', description: 'Foundation, Structure, MEP, Finishing' },
+    { id: 'pool', name: 'Pool House', description: 'Foundation, Pool, Structure, Finishing' },
+    { id: 'guest', name: 'Guest House', description: 'Foundation, Structure, Finishing' },
+    { id: 'landscape', name: 'Landscaping Area', description: 'Garden, Hardscape, Irrigation' },
+  ];
+  
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+      <div style={{ width: '100%', maxWidth: '500px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
         <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600' }}>Add New Building Sequence</h2>
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Sequence Name</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Villa 4, Pool House, Guest House" style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+        
+        {/* Name Input */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Sequence Name *</label>
+          <input 
+            value={name} 
+            onChange={e => setName(e.target.value)} 
+            placeholder="Enter any name (e.g., Villa 4, Pool House, Garage)" 
+            style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} 
+          />
+          <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>You can enter any name - it doesn't have to match existing sequences</p>
         </div>
+        
+        {/* Template Selection (Optional) */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Start from Template (Optional)</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {templates.map(t => (
+              <div 
+                key={t.id}
+                onClick={() => setFromTemplate(fromTemplate === t.id ? '' : t.id)}
+                style={{ 
+                  padding: '12px', 
+                  border: fromTemplate === t.id ? '2px solid #059669' : '1px solid #e5e7eb', 
+                  borderRadius: '8px', 
+                  cursor: 'pointer',
+                  background: fromTemplate === t.id ? '#ecfdf5' : '#fff'
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: '600', color: fromTemplate === t.id ? '#059669' : '#1f2937' }}>{t.name}</div>
+                <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>{t.description}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px', fontStyle: 'italic' }}>Templates coming soon - for now sequences start empty</p>
+        </div>
+        
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
           <button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
-          <button type="button" onClick={() => { if (name.trim()) { onAdd(name.trim()); onClose(); } }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Add Sequence</button>
+          <button 
+            type="button" 
+            onClick={() => { if (name.trim()) { onAdd(name.trim()); onClose(); } }} 
+            disabled={!name.trim()}
+            style={{ padding: '10px 20px', background: name.trim() ? '#059669' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', cursor: name.trim() ? 'pointer' : 'not-allowed' }}
+          >
+            Add Sequence
+          </button>
         </div>
       </div>
     </div>
@@ -1554,7 +1677,7 @@ export default function Home() {
       {taskModal && <TaskModal task={taskModal} onClose={() => setTaskModal(null)} onUpdate={handleTaskUpdate} onDelete={handleTaskDelete} users={users} buildingTasks={buildingTasks} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
       {recurringModal && <RecurringTaskModal task={recurringModal.id ? recurringModal : null} onClose={() => setRecurringModal(null)} onSave={handleRecurringSave} onDelete={handleRecurringDelete} users={users} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
       {addStepModal && <AddStepModal isOpen={!!addStepModal} onClose={() => setAddStepModal(null)} onAdd={(data) => handleAddStep(addStepModal, data)} subCategory={addStepModal} options={options} setOptions={setOptions} />}
-      {addPhaseModal && <AddPhaseModal isOpen={addPhaseModal} onClose={() => setAddPhaseModal(false)} onAdd={handleAddPhase} villa={currentVilla} options={options} />}
+      {addPhaseModal && <AddPhaseModal isOpen={addPhaseModal} onClose={() => setAddPhaseModal(false)} onAdd={handleAddPhase} villa={currentVilla} options={options} setOptions={setOptions} />}
       {workerModal && <WorkerModal worker={workerModal.id ? workerModal : null} onClose={() => setWorkerModal(null)} onSave={(w) => { if (w.id && workforce.find(x => x.id === w.id)) { setWorkforce(prev => prev.map(x => x.id === w.id ? w : x)); } else { setWorkforce(prev => [...prev, w]); } }} onDelete={(id) => setWorkforce(prev => prev.filter(w => w.id !== id))} options={options} setOptions={setOptions} />}
       {addSequenceModal && <AddSequenceModal onClose={() => setAddSequenceModal(false)} onAdd={handleAddSequence} />}
       {pendingReviewModal && <PendingReviewModal change={pendingReviewModal} onClose={() => setPendingReviewModal(null)} onApprove={approveChange} onReject={rejectChange} onComment={addChangeComment} users={users} buildingTasks={buildingTasks} />}
