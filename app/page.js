@@ -4,29 +4,38 @@ import { useUser, SignIn, SignOutButton } from '@clerk/nextjs';
 
 // ============ USERS ============
 const mockUsers = [
-  { id: 1, email: 'patrick@northstar-performance.com', username: 'Patrick', avatar: 'https://ui-avatars.com/api/?name=Patrick&background=059669&color=fff', role: 'manager', isAdmin: true, managerId: null },
-  { id: 2, email: 'david@northstar-performance.com', username: 'David', avatar: 'https://ui-avatars.com/api/?name=David&background=0ea5e9&color=fff', role: 'manager', isAdmin: false, managerId: 1 },
-  { id: 3, email: 'jiratchaya@northstar-performance.com', username: 'Jean', avatar: 'https://ui-avatars.com/api/?name=Jean&background=8b5cf6&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 2 },
-  { id: 4, email: 'jirapongthong@gmail.com', username: 'Ball', avatar: 'https://ui-avatars.com/api/?name=Ball&background=f59e0b&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 1 },
+  { id: 1, email: 'patrick@northstar-performance.com', username: 'Patrick', avatar: 'https://ui-avatars.com/api/?name=Patrick&background=059669&color=fff', role: 'manager', isAdmin: true, managerId: null, approvers: [] },
+  { id: 2, email: 'david@northstar-performance.com', username: 'David', avatar: 'https://ui-avatars.com/api/?name=David&background=0ea5e9&color=fff', role: 'manager', isAdmin: false, managerId: 1, approvers: [1] },
+  { id: 3, email: 'jiratchaya@northstar-performance.com', username: 'Jean', avatar: 'https://ui-avatars.com/api/?name=Jean&background=8b5cf6&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 2, approvers: [1, 2] },
+  { id: 4, email: 'jirapongthong@gmail.com', username: 'Ball', avatar: 'https://ui-avatars.com/api/?name=Ball&background=f59e0b&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 1, approvers: [1] },
 ];
+
+const CONSTRUCTION_MANAGER_ID = 2; // David - confirms SC arrivals
 
 const PROCUREMENT_USER_ID = 4;
 const TODAY = '2026-01-06';
 
 // ============ INITIAL DATA ============
 const initialKanbanTasks = [
-  { id: 'k1', title: 'Review site safety protocols', assignedTo: 3, column: 'today', dueDate: '2026-01-06', type: 'manual', createdAt: '2026-01-04' },
-  { id: 'k2', title: 'Coordinate with architect', assignedTo: 2, column: 'thisWeek', dueDate: '2026-01-08', type: 'manual', createdAt: '2026-01-03' },
-  { id: 'k3', title: 'Order safety gear', assignedTo: 4, column: 'later', dueDate: '2026-01-15', type: 'manual', createdAt: '2026-01-02' },
-  { id: 'k4', title: 'Weekly progress report', assignedTo: 1, column: 'thisWeek', dueDate: '2026-01-10', type: 'manual', createdAt: '2026-01-01' },
+  { id: 'k1', title: 'Review site safety protocols', assignedTo: 3, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-04' },
+  { id: 'k2', title: 'Coordinate with architect', assignedTo: 2, column: 'thisWeek', dueDate: '2026-01-08', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-03' },
+  { id: 'k3', title: 'Order safety gear', assignedTo: 4, column: 'waiting', dueDate: '2026-01-15', expectedArrival: '2026-01-12', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-02' },
+  { id: 'k4', title: 'Weekly progress report', assignedTo: 1, column: 'thisWeek', dueDate: '2026-01-10', type: 'manual', estTime: 1.5, actualTime: null, createdAt: '2026-01-01' },
+  { id: 'k5', title: 'Daily inbox zero & emails', assignedTo: 3, column: 'today', dueDate: '2026-01-06', type: 'recurring', estTime: 1, actualTime: null, createdAt: '2026-01-06' },
+  { id: 'k6', title: 'Research concrete suppliers', assignedTo: 3, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-05' },
+  { id: 'k7', title: 'Update project timeline', assignedTo: 2, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1.5, actualTime: null, createdAt: '2026-01-05' },
+  { id: 'k8', title: 'Check material inventory', assignedTo: 4, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-05' },
+  { id: 'k9', title: 'Supplier price comparison', assignedTo: 3, column: 'review', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-04' },
+  { id: 'k10', title: 'Follow up on rebar delivery', assignedTo: 4, column: 'waiting', dueDate: '2026-01-10', expectedArrival: '2026-01-09', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-03' },
 ];
 
 const initialRecurringTasks = [
-  { id: 'r1', title: 'Daily safety inspection', assignedTo: 3, frequency: 'daily', days: [], specificDates: [], createdAt: '2026-01-01' },
-  { id: 'r2', title: 'Weekly team standup', assignedTo: 1, frequency: 'weekly', days: ['Monday'], specificDates: [], createdAt: '2026-01-01' },
-  { id: 'r3', title: 'Monthly inventory check', assignedTo: 4, frequency: 'monthly', days: ['1'], specificDates: [], createdAt: '2026-01-01' },
-  { id: 'r4', title: 'Quarterly safety audit', assignedTo: 2, frequency: 'specific', days: [], specificDates: ['2026-03-01', '2026-06-01', '2026-09-01', '2026-12-01'], createdAt: '2026-01-01' },
-  { id: 'r5', title: 'Check tool inventory', assignedTo: 3, frequency: 'weekly', days: ['Friday'], specificDates: [], createdAt: '2026-01-01' },
+  { id: 'r1', title: 'Daily safety inspection', assignedTo: 3, frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
+  { id: 'r2', title: 'Weekly team standup', assignedTo: 1, frequency: 'weekly', days: ['Monday'], specificDates: [], estTime: 1, createdAt: '2026-01-01' },
+  { id: 'r3', title: 'Monthly inventory check', assignedTo: 4, frequency: 'monthly', days: ['1'], specificDates: [], estTime: 2, createdAt: '2026-01-01' },
+  { id: 'r4', title: 'Quarterly safety audit', assignedTo: 2, frequency: 'specific', days: [], specificDates: ['2026-03-01', '2026-06-01', '2026-09-01', '2026-12-01'], estTime: 4, createdAt: '2026-01-01' },
+  { id: 'r5', title: 'Daily inbox zero & emails', assignedTo: 3, frequency: 'daily', days: [], specificDates: [], estTime: 1, createdAt: '2026-01-01' },
+  { id: 'r6', title: 'Check supplier status updates', assignedTo: 4, frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
 ];
 
 const initialComments = {
@@ -56,19 +65,32 @@ const initialBuildingTasks = [
 ];
 
 const initialSCTasks = [
-  { id: 'sc1', buildingTaskId: 5, title: 'SC for Concrete Pour - Concrete - Base Foundation - Villa 3', assignedTo: PROCUREMENT_USER_ID, column: 'thisWeek', scStatus: 'research', dueDate: '2026-01-08', deadlineOnSite: '2026-01-08', expectedArrival: '', type: 'sc', createdAt: '2026-01-04' },
-  { id: 'sc2', buildingTaskId: 8, title: 'SC for Brick Laying - Brick Work - Strip Foundation - Villa 3', assignedTo: PROCUREMENT_USER_ID, column: 'later', scStatus: 'research', dueDate: '2026-01-13', deadlineOnSite: '2026-01-13', expectedArrival: '', type: 'sc', createdAt: '2026-01-04' },
-  { id: 'sc3', buildingTaskId: 9, title: 'SC for Concrete Pouring - Concrete - Strip Foundation - Villa 3', assignedTo: PROCUREMENT_USER_ID, column: 'later', scStatus: 'research', dueDate: '2026-01-18', deadlineOnSite: '2026-01-18', expectedArrival: '', type: 'sc', createdAt: '2026-01-04' },
+  { id: 'sc1', buildingTaskId: 5, title: 'SC: Concrete Pour - Base Foundation - Villa 3', assignedTo: PROCUREMENT_USER_ID, column: 'thisWeek', scStatus: 'research', dueDate: '2026-01-08', deadlineOnSite: '2026-01-08', expectedArrival: '', type: 'sc', estTime: 2, actualTime: null, createdAt: '2026-01-04' },
+  { id: 'sc2', buildingTaskId: 8, title: 'SC: Brick Laying - Strip Foundation - Villa 3', assignedTo: PROCUREMENT_USER_ID, column: 'waiting', scStatus: 'pendingArrival', dueDate: '2026-01-13', deadlineOnSite: '2026-01-13', expectedArrival: '2026-01-10', type: 'sc', estTime: 1.5, actualTime: null, createdAt: '2026-01-04' },
+  { id: 'sc3', buildingTaskId: 9, title: 'SC: Concrete Pouring - Strip Foundation - Villa 3', assignedTo: PROCUREMENT_USER_ID, column: 'later', scStatus: 'research', dueDate: '2026-01-18', deadlineOnSite: '2026-01-18', expectedArrival: '', type: 'sc', estTime: 2, actualTime: null, createdAt: '2026-01-04' },
 ];
 
 const initialOptions = {
-  status: ['Done', 'In Progress', 'Ready to start (Supply Chain confirmed on-site)', 'Supply Chain Pending Order', 'Supply Chain Pending Arrival', 'Blocked', 'On Hold'],
+  status: ['Done', 'In Progress', 'Ready to start (Supply Chain confirmed on-site)', 'Supply Chain Arrived to be Confirmed', 'Supply Chain Pending Arrival', 'Supply Chain Pending Order', 'Blocked', 'On Hold'],
   mainCategory: ['1 Site Prep', '2 Foundation', '3 Structure', '4 Roofing', '5 MEP', '6 Finishes', 'Landscaping', 'Infrastructure'],
   subCategory: { '2 Foundation': ['Base Foundation (incl columns)', 'Strip Foundation', 'Plumbing', 'Main Slab Foundation'], '3 Structure': ['Columns', 'Beams', 'Walls', 'Slabs'], 'Landscaping': ['Garden', 'Trees', 'Irrigation'], 'Infrastructure': ['Pathways', 'Drainage', 'Lighting'] },
   task: { 'Base Foundation (incl columns)': ['Formwork', 'Re-Bar', 'Concrete'], 'Strip Foundation': ['Brick Work', 'Concrete', 'Plinch-Beam', 'Formwork'], 'Plumbing': ['Rough-in', 'Connections', 'Testing'], 'Garden': ['Preparation', 'Planting', 'Mulching'], 'Pathways': ['Groundwork', 'Base Layer', 'Surface'], 'Drainage': ['Main Drains', 'Connections', 'Testing'] },
   skilledWorker: ['zin', 'Joshua', 'zaw', 'diesel', 'San Shwe'],
   unskilledWorker: ['Tun Sein Maung', 'Sone', 'Min Pyea', 'Thein Win']
 };
+
+// ============ WORKFORCE DATA ============
+const initialWorkforce = [
+  { id: 'w1', name: 'zin', type: 'skilled', hourlyRate: 150, status: 'active', debt: 0, debtDescription: '', repaymentFrequency: 'none' },
+  { id: 'w2', name: 'Joshua', type: 'skilled', hourlyRate: 180, status: 'active', debt: 5000, debtDescription: 'Tool advance', repaymentFrequency: 'weekly' },
+  { id: 'w3', name: 'zaw', type: 'skilled', hourlyRate: 160, status: 'active', debt: 0, debtDescription: '', repaymentFrequency: 'none' },
+  { id: 'w4', name: 'diesel', type: 'skilled', hourlyRate: 170, status: 'active', debt: 2000, debtDescription: 'Salary advance', repaymentFrequency: 'monthly' },
+  { id: 'w5', name: 'San Shwe', type: 'skilled', hourlyRate: 200, status: 'active', debt: 0, debtDescription: '', repaymentFrequency: 'none' },
+  { id: 'w6', name: 'Tun Sein Maung', type: 'unskilled', hourlyRate: 80, status: 'active', debt: 1500, debtDescription: 'Medical expense', repaymentFrequency: 'weekly' },
+  { id: 'w7', name: 'Sone', type: 'unskilled', hourlyRate: 75, status: 'active', debt: 0, debtDescription: '', repaymentFrequency: 'none' },
+  { id: 'w8', name: 'Min Pyea', type: 'unskilled', hourlyRate: 80, status: 'active', debt: 3000, debtDescription: 'Family emergency', repaymentFrequency: 'daily' },
+  { id: 'w9', name: 'Thein Win', type: 'unskilled', hourlyRate: 70, status: 'active', debt: 0, debtDescription: '', repaymentFrequency: 'none' },
+];
 
 // ============ UTILITIES ============
 const getReadiness = (task, categoryTasks, index) => {
@@ -90,7 +112,7 @@ const getReadiness = (task, categoryTasks, index) => {
 };
 
 const getStatusStyle = (status) => {
-  const styles = { 'Done': { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', dot: '#16a34a' }, 'In Progress': { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', dot: '#7c3aed' }, 'Ready to start (Supply Chain confirmed on-site)': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' }, 'Supply Chain Pending Order': { bg: 'rgba(220,38,38,0.1)', color: '#dc2626', dot: '#dc2626' }, 'Supply Chain Pending Arrival': { bg: 'rgba(217,119,6,0.1)', color: '#d97706', dot: '#d97706' }, 'Blocked': { bg: 'rgba(107,114,128,0.1)', color: '#6b7280', dot: '#6b7280' }, 'On Hold': { bg: 'rgba(156,163,175,0.1)', color: '#9ca3af', dot: '#9ca3af' } };
+  const styles = { 'Done': { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', dot: '#16a34a' }, 'In Progress': { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', dot: '#7c3aed' }, 'Ready to start (Supply Chain confirmed on-site)': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' }, 'Supply Chain Arrived to be Confirmed': { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', dot: '#0ea5e9' }, 'Supply Chain Pending Order': { bg: 'rgba(220,38,38,0.1)', color: '#dc2626', dot: '#dc2626' }, 'Supply Chain Pending Arrival': { bg: 'rgba(217,119,6,0.1)', color: '#d97706', dot: '#d97706' }, 'Blocked': { bg: 'rgba(107,114,128,0.1)', color: '#6b7280', dot: '#6b7280' }, 'On Hold': { bg: 'rgba(156,163,175,0.1)', color: '#9ca3af', dot: '#9ca3af' } };
   return styles[status] || { bg: '#f3f4f6', color: '#6b7280', dot: '#9ca3af' };
 };
 
@@ -206,36 +228,64 @@ const NotificationsPanel = ({ notifications, setNotifications, users, onClose, o
 );
 
 // ============ KANBAN ============
-const KanbanColumn = ({ id, title, tasks, onDrop, onDragOver, users, onTaskClick, onDragStart, dragOverColumn, dragOverTaskId, setDragOverTaskId }) => (
+const KanbanColumn = ({ id, title, tasks, onDrop, onDragOver, users, onTaskClick, onDragStart, dragOverColumn, dragOverTaskId, setDragOverTaskId, currentUserId }) => {
+  const totalHours = tasks.reduce((sum, t) => sum + (t.estTime || 0), 0);
+  return (
   <div onDragOver={(e) => { e.preventDefault(); onDragOver(id); }} onDrop={(e) => { e.preventDefault(); onDrop(id); }} style={{ flex: '0 0 280px', minWidth: '280px', background: dragOverColumn === id ? 'rgba(5,150,105,0.05)' : '#f9fafb', borderRadius: '12px', padding: '12px', border: dragOverColumn === id ? '2px dashed #059669' : '2px solid transparent' }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}><h3 style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', margin: 0 }}>{title}</h3><span style={{ fontSize: '12px', color: '#9ca3af', background: '#fff', padding: '2px 8px', borderRadius: '10px' }}>{tasks.length}</span></div>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', margin: 0 }}>{title}</h3>
+        {totalHours > 0 && <span style={{ fontSize: '11px', color: '#059669', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>{totalHours}h</span>}
+      </div>
+      <span style={{ fontSize: '12px', color: '#9ca3af', background: '#fff', padding: '2px 8px', borderRadius: '10px' }}>{tasks.length}</span>
+    </div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '100px' }}>
-      {tasks.map(task => { const assignee = users.find(u => u.id === task.assignedTo); const overdue = isOverdue(task.dueDate); return (
-        <div key={task.id} draggable onDragStart={(e) => onDragStart(e, task)} onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverTaskId(task.id); }} onClick={() => onTaskClick(task)} style={{ background: '#fff', borderRadius: '8px', padding: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', cursor: 'grab', border: dragOverTaskId === task.id ? '2px solid #059669' : '1px solid #e5e7eb' }}>
+      {tasks.map(task => { 
+        const assignee = users.find(u => u.id === task.assignedTo); 
+        const overdue = isOverdue(task.dueDate); 
+        const isReviewFromOther = task.column === 'review' && task.assignedTo !== currentUserId;
+        return (
+        <div key={task.id} draggable onDragStart={(e) => onDragStart(e, task)} onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverTaskId(task.id); }} onClick={() => onTaskClick(task)} style={{ background: isReviewFromOther ? '#fef3c7' : '#fff', borderRadius: '8px', padding: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', cursor: 'grab', border: dragOverTaskId === task.id ? '2px solid #059669' : isReviewFromOther ? '2px solid #f59e0b' : '1px solid #e5e7eb' }}>
+          {isReviewFromOther && <div style={{ fontSize: '10px', fontWeight: '600', color: '#d97706', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>⭐ NEEDS YOUR REVIEW</div>}
           <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '8px', color: '#1f2937' }}>{task.title}</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
               {task.type === 'sc' && <span style={{ fontSize: '10px', padding: '2px 6px', background: '#dbeafe', color: '#2563eb', borderRadius: '4px', fontWeight: '600' }}>SC</span>}
               {task.type === 'recurring' && <span style={{ fontSize: '10px', padding: '2px 6px', background: '#f3e8ff', color: '#7c3aed', borderRadius: '4px', fontWeight: '600' }}>↻</span>}
-              {task.dueDate && <span style={{ fontSize: '11px', color: overdue ? '#dc2626' : '#6b7280', fontWeight: overdue ? '600' : '400' }}>{new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+              {task.estTime && <span style={{ fontSize: '10px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '2px' }}>🕐 {task.estTime}h</span>}
+              {task.dueDate && <span style={{ fontSize: '11px', color: overdue ? '#dc2626' : '#6b7280', fontWeight: overdue ? '600' : '400' }}>📅 {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
             </div>
-            {assignee && <img src={assignee.avatar} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%' }} />}
+            {assignee && <img src={assignee.avatar} alt="" title={assignee.username} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />}
           </div>
+          {task.expectedArrival && <div style={{ marginTop: '6px', fontSize: '10px', color: '#0891b2', background: '#ecfeff', padding: '3px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📦 {new Date(task.expectedArrival).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>}
         </div>
       ); })}
     </div>
   </div>
 );
-
-const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks }) => {
+};
+const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, comments, setComments, currentUser, setNotifications }) => {
   const [form, setForm] = useState({ ...task });
+  const [commentText, setCommentText] = useState('');
   const isSC = task?.type === 'sc';
   const linkedBT = isSC ? buildingTasks.find(bt => bt.id === task.buildingTaskId) : null;
   const scStatuses = ['research', 'researchApproval', 'pendingArrival', 'readyToStart'];
   const scLabels = { research: 'Research', researchApproval: 'Research Approval', pendingArrival: 'Pending Arrival', readyToStart: 'Ready to Start' };
+  const taskComments = comments[task?.id] || [];
+  
+  const handleAddComment = () => {
+    if (!commentText.trim()) return;
+    const mentionMatches = commentText.match(/@(\w+)/g) || [];
+    const mentionedUsers = mentionMatches.map(m => users.find(u => u.username.toLowerCase().startsWith(m.slice(1).toLowerCase()))).filter(Boolean);
+    const newComment = { id: Date.now(), taskId: task.id, userId: currentUser.id, text: commentText, timestamp: new Date().toISOString(), mentions: mentionedUsers.map(u => u.id) };
+    setComments(prev => ({ ...prev, [task.id]: [...(prev[task.id] || []), newComment] }));
+    mentionedUsers.forEach(u => { if (u.id !== currentUser.id) setNotifications(prev => [...prev, { id: Date.now() + u.id, userId: u.id, fromUserId: currentUser.id, taskId: task.id, text: `${currentUser.username} mentioned you`, timestamp: new Date().toISOString(), read: false }]); });
+    setCommentText('');
+  };
+  
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '500px', background: '#fff', borderRadius: '16px', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+      <div style={{ width: '100%', maxWidth: '600px', background: '#fff', borderRadius: '16px', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>Edit Task</h2><button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><Icon name="x" /></button></div>
         {isSC && linkedBT && <div style={{ background: '#eff6ff', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}><div style={{ fontSize: '12px', fontWeight: '600', color: '#0369a1', marginBottom: '4px' }}>Linked to Building Sequence</div><div style={{ fontSize: '13px', color: '#0c4a6e' }}>{linkedBT.step} - {linkedBT.task} - {linkedBT.subCategory}</div></div>}
         <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Title</label><input value={form.title || ''} onChange={e => setForm({ ...form, title: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
@@ -243,7 +293,25 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks }) 
           <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Due Date</label><input type="date" value={form.dueDate || ''} onChange={e => setForm({ ...form, dueDate: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
           <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Assigned To</label><select value={form.assignedTo || ''} onChange={e => setForm({ ...form, assignedTo: Number(e.target.value) })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>{users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div>
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Est. Time (hours)</label><input type="number" step="0.5" min="0" value={form.estTime || ''} onChange={e => setForm({ ...form, estTime: parseFloat(e.target.value) || 0 })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
+          <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Actual Time (hours)</label><input type="number" step="0.5" min="0" value={form.actualTime || ''} onChange={e => setForm({ ...form, actualTime: parseFloat(e.target.value) || 0 })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
+        </div>
+        <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Expected Arrival (for waiting items)</label><input type="date" value={form.expectedArrival || ''} onChange={e => setForm({ ...form, expectedArrival: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
         {isSC && <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>SC Status</label><div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>{scStatuses.map(s => <button key={s} type="button" onClick={() => setForm({ ...form, scStatus: s })} style={{ padding: '6px 12px', fontSize: '12px', border: form.scStatus === s ? '2px solid #059669' : '1px solid #e5e7eb', borderRadius: '6px', background: form.scStatus === s ? '#ecfdf5' : '#fff', color: form.scStatus === s ? '#059669' : '#6b7280', cursor: 'pointer' }}>{scLabels[s]}</button>)}</div></div>}
+        
+        {/* Comments Section */}
+        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginTop: '16px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px' }}>Comments ({taskComments.length})</label>
+          <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '12px' }}>
+            {taskComments.length === 0 ? <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', padding: '20px' }}>No comments yet</p> : taskComments.map(c => {
+              const author = users.find(u => u.id === c.userId);
+              return <div key={c.id} style={{ marginBottom: '12px', padding: '10px', background: '#f9fafb', borderRadius: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}><img src={author?.avatar} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%' }} /><span style={{ fontSize: '12px', fontWeight: '600' }}>{author?.username}</span><span style={{ fontSize: '10px', color: '#9ca3af' }}>{formatTime(c.timestamp)}</span></div><p style={{ margin: 0, fontSize: '13px', color: '#374151' }}>{c.text.split(/(@\w+)/g).map((part, i) => part.startsWith('@') ? <span key={i} style={{ color: '#059669', fontWeight: '500' }}>{part}</span> : part)}</p></div>;
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}><input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddComment()} placeholder="Add a comment... (use @ to mention)" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px' }} /><button type="button" onClick={handleAddComment} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Icon name="send" size={16} /></button></div>
+        </div>
+        
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>{task && !isSC ? <button type="button" onClick={() => { onDelete(task.id); onClose(); }} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button> : <div />}<div style={{ display: 'flex', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { onUpdate(form); onClose(); }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button></div></div>
       </div>
     </div>
@@ -315,10 +383,194 @@ const AddPhaseModal = ({ isOpen, onClose, onAdd, villa, options }) => {
   );
 };
 
+// ============ WORKER MODAL ============
+const WorkerModal = ({ worker, onClose, onSave, onDelete, options, setOptions }) => {
+  const [form, setForm] = useState(worker || { id: '', name: '', type: 'skilled', hourlyRate: 100, status: 'active', debt: 0, debtDescription: '', repaymentFrequency: 'none' });
+  const isNew = !worker?.id;
+  
+  const handleSave = () => {
+    if (!form.name) return;
+    const savedWorker = { ...form, id: form.id || 'w' + Date.now() };
+    onSave(savedWorker);
+    
+    // Update options to include new worker name
+    if (isNew) {
+      const key = form.type === 'skilled' ? 'skilledWorker' : 'unskilledWorker';
+      if (!options[key].includes(form.name)) {
+        setOptions(prev => ({ ...prev, [key]: [...prev[key], form.name] }));
+      }
+    }
+    onClose();
+  };
+  
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
+      <div style={{ width: '100%', maxWidth: '500px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>{isNew ? 'Add Worker' : 'Edit Worker'}</h2><button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><Icon name="x" /></button></div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Name</label><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
+          <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Type</label><select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}><option value="skilled">Skilled</option><option value="unskilled">Unskilled</option></select></div>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Hourly Rate (THB)</label><input type="number" value={form.hourlyRate} onChange={e => setForm({ ...form, hourlyRate: Number(e.target.value) })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
+          <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Status</label><select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+        </div>
+        
+        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginTop: '8px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#6b7280' }}>Debt Tracking</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Debt Amount (THB)</label><input type="number" value={form.debt} onChange={e => setForm({ ...form, debt: Number(e.target.value) })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
+            <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Repayment Frequency</label><select value={form.repaymentFrequency} onChange={e => setForm({ ...form, repaymentFrequency: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}><option value="none">None</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
+          </div>
+          <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Debt Description</label><input value={form.debtDescription} onChange={e => setForm({ ...form, debtDescription: e.target.value })} placeholder="e.g., Salary advance, Medical expense" style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
+          {!isNew ? <button type="button" onClick={() => { onDelete(worker.id); onClose(); }} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button> : <div />}
+          <div style={{ display: 'flex', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={handleSave} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============ ADD SEQUENCE MODAL ============
+const AddSequenceModal = ({ onClose, onAdd }) => {
+  const [name, setName] = useState('');
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
+      <div style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+        <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600' }}>Add New Building Sequence</h2>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Sequence Name</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Villa 4, Pool House, Guest House" style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
+          <button type="button" onClick={() => { if (name.trim()) { onAdd(name.trim()); onClose(); } }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Add Sequence</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============ PENDING REVIEW MODAL ============
+const PendingReviewModal = ({ change, onClose, onApprove, onReject, onComment, users, buildingTasks }) => {
+  const [commentText, setCommentText] = useState('');
+  const requestedByUser = users.find(u => u.id === change.requestedBy);
+  const task = change.taskId ? buildingTasks.find(t => t.id === change.taskId) : null;
+  
+  const getChangeDescription = () => {
+    if (change.type === 'edit') return `Change ${change.field} from "${change.oldValue || '(empty)'}" to "${change.newValue}"`;
+    if (change.type === 'add_step') return `Add new step: "${change.newTask?.step}" to ${change.subCategory}`;
+    if (change.type === 'add_phase') return `Add new phase: ${change.subCategory} (${change.mainCategory})`;
+    if (change.type === 'delete') return `Delete step: "${change.step}" from ${change.subCategory}`;
+    if (change.type === 'add_sequence') return `Add new building sequence: "${change.sequenceLabel}"`;
+    return 'Unknown change';
+  };
+  
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
+      <div style={{ width: '100%', maxWidth: '600px', background: '#fff', borderRadius: '16px', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>Review Proposed Change</h2>
+          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><Icon name="x" /></button>
+        </div>
+        
+        {/* Change Details */}
+        <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <img src={requestedByUser?.avatar} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: '600' }}>{requestedByUser?.username}</div>
+              <div style={{ fontSize: '12px', color: '#6b7280' }}>{formatTime(change.timestamp)}</div>
+            </div>
+          </div>
+          
+          <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#1f2937' }}>{getChangeDescription()}</div>
+          
+          {change.villa && <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>📍 {change.villa} → {change.subCategory}</div>}
+          
+          {change.type === 'edit' && task && (
+            <div style={{ marginTop: '12px', padding: '12px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' }}>AFFECTED TASK</div>
+              <div style={{ fontSize: '13px' }}>{task.step} - {task.task}</div>
+            </div>
+          )}
+          
+          {change.type === 'edit' && (
+            <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ padding: '12px', background: '#fef2f2', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#dc2626', marginBottom: '4px' }}>CURRENT ({change.field})</div>
+                <div style={{ fontSize: '13px', color: '#1f2937' }}>{change.oldValue || '(empty)'}</div>
+              </div>
+              <div style={{ padding: '12px', background: '#ecfdf5', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#059669', marginBottom: '4px' }}>PROPOSED ({change.field})</div>
+                <div style={{ fontSize: '13px', color: '#1f2937' }}>{change.newValue}</div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Comments */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px' }}>Comments ({change.comments?.length || 0})</div>
+          <div style={{ maxHeight: '150px', overflowY: 'auto', marginBottom: '12px' }}>
+            {(change.comments || []).length === 0 ? (
+              <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', padding: '16px' }}>No comments yet</p>
+            ) : (
+              change.comments.map(c => {
+                const author = users.find(u => u.id === c.userId);
+                return (
+                  <div key={c.id} style={{ marginBottom: '8px', padding: '10px', background: '#f9fafb', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <img src={author?.avatar} alt="" style={{ width: '20px', height: '20px', borderRadius: '50%' }} />
+                      <span style={{ fontSize: '12px', fontWeight: '600' }}>{author?.username}</span>
+                      <span style={{ fontSize: '10px', color: '#9ca3af' }}>{formatTime(c.timestamp)}</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#374151' }}>{c.text}</p>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input 
+              value={commentText} 
+              onChange={e => setCommentText(e.target.value)} 
+              placeholder="Add a comment..." 
+              style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px' }} 
+            />
+            <button 
+              type="button" 
+              onClick={() => { if (commentText.trim()) { onComment(change.id, commentText); setCommentText(''); } }} 
+              style={{ padding: '10px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              <Icon name="send" size={16} />
+            </button>
+          </div>
+        </div>
+        
+        {/* Actions */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+          <button type="button" onClick={() => { onReject(change.id); onClose(); }} style={{ padding: '10px 24px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+            ✕ Reject
+          </button>
+          <button type="button" onClick={() => { onApprove(change.id); onClose(); }} style={{ padding: '10px 24px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+            ✓ Approve & Set Live
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ============ BUILDING SEQUENCE COMPONENTS ============
 const Dropdown = ({ value, options, onChange, placeholder }) => { const [open, setOpen] = useState(false); const ref = useRef(null); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ width: '100%', padding: '6px 10px', fontSize: '13px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', textAlign: 'left', cursor: 'pointer', color: value ? '#1f2937' : '#9ca3af' }}>{value || placeholder}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '180px', overflowY: 'auto' }}>{options.map((o,i) => <div key={i} onClick={() => { onChange(o); setOpen(false); }} style={{ padding: '8px 12px', cursor: 'pointer', background: o === value ? '#f3f4f6' : 'transparent' }}>{o}</div>)}</div>}</div>); };
 
-const StatusDropdown = ({ value, options, onChange }) => { const [open, setOpen] = useState(false); const ref = useRef(null); const style = getStatusStyle(value); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); const short = s => s === 'Ready to start (Supply Chain confirmed on-site)' ? 'Ready' : (s || 'Set status').replace('Supply Chain Pending', 'SC'); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', fontSize: '12px', fontWeight: '500', background: style.bg, border: 'none', borderRadius: '6px', color: style.color, cursor: 'pointer', whiteSpace: 'nowrap' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: style.dot }} />{short(value)}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, minWidth: '220px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100 }}>{options.map((o,i) => { const s = getStatusStyle(o); return <div key={i} onClick={() => { onChange(o); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.dot }} />{o}</div>; })}</div>}</div>); };
+const StatusDropdown = ({ value, options, onChange }) => { const [open, setOpen] = useState(false); const ref = useRef(null); const style = getStatusStyle(value); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); const short = s => s === 'Ready to start (Supply Chain confirmed on-site)' ? 'Ready' : s === 'Supply Chain Arrived to be Confirmed' ? 'SC Arrived' : (s || 'Set status').replace('Supply Chain Pending', 'SC'); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', fontSize: '12px', fontWeight: '500', background: style.bg, border: 'none', borderRadius: '6px', color: style.color, cursor: 'pointer', whiteSpace: 'nowrap' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: style.dot }} />{short(value)}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, minWidth: '260px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100 }}>{options.map((o,i) => { const s = getStatusStyle(o); return <div key={i} onClick={() => { onChange(o); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.dot }} />{o}</div>; })}</div>}</div>); };
 
 const EditableCell = ({ value, onChange, placeholder }) => { const [editing, setEditing] = useState(false); const [temp, setTemp] = useState(value); const ref = useRef(null); useEffect(() => { if (editing && ref.current) ref.current.focus(); }, [editing]); if (editing) return <input ref={ref} value={temp} onChange={e => setTemp(e.target.value)} onBlur={() => { setEditing(false); onChange(temp); }} onKeyDown={e => e.key === 'Enter' && (setEditing(false), onChange(temp))} style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #059669', borderRadius: '6px', boxSizing: 'border-box' }} />; return <div onClick={() => { setTemp(value); setEditing(true); }} style={{ padding: '6px', fontSize: '13px', color: value ? '#1f2937' : '#9ca3af', cursor: 'text', minHeight: '28px' }}>{value || placeholder}</div>; };
 
@@ -335,6 +587,9 @@ export default function Home() {
   const [comments, setComments] = useState(initialComments);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [options, setOptions] = useState(initialOptions);
+  const [workforce, setWorkforce] = useState(initialWorkforce);
+  const [workerModal, setWorkerModal] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(TODAY);
   const [activeNav, setActiveNav] = useState('taskBoard');
   const [expandedNav, setExpandedNav] = useState(['sequence']);
   const [selectedTaskUser, setSelectedTaskUser] = useState(null);
@@ -343,6 +598,15 @@ export default function Home() {
   const [recurringModal, setRecurringModal] = useState(null);
   const [addStepModal, setAddStepModal] = useState(null);
   const [addPhaseModal, setAddPhaseModal] = useState(false);
+  const [addSequenceModal, setAddSequenceModal] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState([]);
+  const [pendingReviewModal, setPendingReviewModal] = useState(null);
+  const [buildingSequences, setBuildingSequences] = useState([
+    { id: 'villa3', label: 'Villa 3' },
+    { id: 'villa2', label: 'Villa 2' },
+    { id: 'villa1', label: 'Villa 1' },
+    { id: 'landscaping', label: 'Landscaping' },
+  ]);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
   const [dragOverTaskId, setDragOverTaskId] = useState(null);
@@ -362,11 +626,148 @@ export default function Home() {
   if (!isSignedIn && !demoMode) return <LoginScreen onDemoLogin={() => setDemoMode(true)} />;
 
   const isManager = currentUser.role === 'manager';
-  const handleBuildingStatusChange = (taskId, newStatus, oldStatus) => { setBuildingTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t)); if (newStatus === 'Supply Chain Pending Order' && oldStatus !== 'Supply Chain Pending Order') { const task = buildingTasks.find(t => t.id === taskId); if (task && !kanbanTasks.find(kt => kt.type === 'sc' && kt.buildingTaskId === taskId)) { setKanbanTasks(prev => [...prev, { id: 'sc' + Date.now(), buildingTaskId: taskId, title: `SC for ${task.step} - ${task.task} - ${task.subCategory} - ${task.villa}`, assignedTo: PROCUREMENT_USER_ID, column: 'thisWeek', scStatus: 'research', dueDate: calculateDeadlineOnSite(task.earliestStart), deadlineOnSite: calculateDeadlineOnSite(task.earliestStart), expectedArrival: '', type: 'sc', createdAt: TODAY }]); } } };
+  
+  // ============ APPROVAL WORKFLOW ============
+  const proposeChange = (type, data) => {
+    const change = {
+      id: 'pc' + Date.now(),
+      type, // 'edit', 'add_step', 'add_phase', 'delete', 'reorder', 'add_sequence'
+      ...data,
+      requestedBy: currentUser.id,
+      timestamp: new Date().toISOString(),
+      status: 'pending',
+      comments: []
+    };
+    setPendingChanges(prev => [...prev, change]);
+    // Create task for admin to review
+    setKanbanTasks(prev => [...prev, {
+      id: 'review' + Date.now(),
+      title: `Review: ${type} by ${currentUser.username}`,
+      assignedTo: 1, // Patrick
+      column: 'today',
+      dueDate: TODAY,
+      type: 'manual',
+      estTime: 0.5,
+      actualTime: null,
+      linkedChangeId: change.id,
+      createdAt: TODAY
+    }]);
+    setNotifications(prev => [...prev, {
+      id: Date.now(),
+      userId: 1, // Patrick
+      fromUserId: currentUser.id,
+      text: `${currentUser.username} proposed a change to Building Sequence`,
+      timestamp: new Date().toISOString(),
+      read: false
+    }]);
+  };
+  
+  const approveChange = (changeId) => {
+    const change = pendingChanges.find(c => c.id === changeId);
+    if (!change) return;
+    
+    // Apply the change
+    if (change.type === 'edit') {
+      setBuildingTasks(prev => prev.map(t => t.id === change.taskId ? { ...t, [change.field]: change.newValue } : t));
+    } else if (change.type === 'add_step') {
+      setBuildingTasks(prev => [...prev, change.newTask]);
+    } else if (change.type === 'add_phase') {
+      setBuildingTasks(prev => [...prev, change.newTask]);
+    } else if (change.type === 'delete') {
+      setBuildingTasks(prev => prev.filter(t => t.id !== change.taskId));
+    } else if (change.type === 'add_sequence') {
+      setBuildingSequences(prev => [...prev, { id: change.sequenceId, label: change.sequenceLabel }]);
+    }
+    
+    // Mark as approved
+    setPendingChanges(prev => prev.map(c => c.id === changeId ? { ...c, status: 'approved' } : c));
+    // Remove review task
+    setKanbanTasks(prev => prev.filter(t => t.linkedChangeId !== changeId));
+  };
+  
+  const rejectChange = (changeId) => {
+    setPendingChanges(prev => prev.map(c => c.id === changeId ? { ...c, status: 'rejected' } : c));
+    setKanbanTasks(prev => prev.filter(t => t.linkedChangeId !== changeId));
+  };
+  
+  const addChangeComment = (changeId, text) => {
+    setPendingChanges(prev => prev.map(c => c.id === changeId ? {
+      ...c,
+      comments: [...c.comments, { id: Date.now(), userId: currentUser.id, text, timestamp: new Date().toISOString() }]
+    } : c));
+  };
+  
+  // Wrapper for building task edits - routes through approval if not admin
+  const editBuildingTask = (taskId, field, newValue) => {
+    const task = buildingTasks.find(t => t.id === taskId);
+    if (!task) return;
+    
+    if (currentUser.isAdmin) {
+      // Admin: apply immediately
+      setBuildingTasks(prev => prev.map(t => t.id === taskId ? { ...t, [field]: newValue } : t));
+    } else {
+      // Non-admin: propose change
+      proposeChange('edit', {
+        taskId,
+        villa: task.villa,
+        subCategory: task.subCategory,
+        step: task.step,
+        field,
+        oldValue: task[field],
+        newValue
+      });
+    }
+  };
+  
+  const handleBuildingStatusChange = (taskId, newStatus, oldStatus) => { 
+    if (currentUser.isAdmin) {
+      setBuildingTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t)); 
+      if (newStatus === 'Supply Chain Pending Order' && oldStatus !== 'Supply Chain Pending Order') { 
+        const task = buildingTasks.find(t => t.id === taskId); 
+        if (task && !kanbanTasks.find(kt => kt.type === 'sc' && kt.buildingTaskId === taskId)) { 
+          setKanbanTasks(prev => [...prev, { id: 'sc' + Date.now(), buildingTaskId: taskId, title: `SC: ${task.step} - ${task.task} - ${task.villa}`, assignedTo: PROCUREMENT_USER_ID, column: 'thisWeek', scStatus: 'research', dueDate: calculateDeadlineOnSite(task.earliestStart), deadlineOnSite: calculateDeadlineOnSite(task.earliestStart), expectedArrival: '', type: 'sc', estTime: 2, actualTime: null, createdAt: TODAY }]); 
+        } 
+      } 
+    } else {
+      // Non-admin: propose status change
+      const task = buildingTasks.find(t => t.id === taskId);
+      proposeChange('edit', {
+        taskId,
+        villa: task?.villa,
+        subCategory: task?.subCategory,
+        step: task?.step,
+        field: 'status',
+        oldValue: oldStatus,
+        newValue: newStatus
+      });
+    }
+  };
 
-  const getVisibleTasks = () => { let tasks = kanbanTasks; if (isManager && selectedTaskUser === null) { } else if (selectedTaskUser === 'all') { } else if (selectedTaskUser) { tasks = tasks.filter(t => t.assignedTo === selectedTaskUser); } else { tasks = tasks.filter(t => t.assignedTo === currentUser.id); } return tasks; };
+  const getVisibleTasks = () => { 
+    let tasks = kanbanTasks; 
+    
+    // Filter by selected user
+    if (isManager && selectedTaskUser === null) { 
+      // Manager default: see all tasks
+    } else if (selectedTaskUser === 'all') { 
+      // Explicit "all" - see everything
+    } else if (selectedTaskUser) { 
+      tasks = tasks.filter(t => t.assignedTo === selectedTaskUser); 
+    } else { 
+      // Non-manager: see own tasks
+      tasks = tasks.filter(t => t.assignedTo === currentUser.id); 
+    }
+    
+    // For managers: ALWAYS include "To Be Reviewed" tasks from reports (even when filtered)
+    if (isManager && selectedTaskUser && selectedTaskUser !== 'all') {
+      const reviewTasks = kanbanTasks.filter(t => t.column === 'review' && t.assignedTo !== currentUser.id);
+      tasks = [...tasks, ...reviewTasks.filter(rt => !tasks.find(t => t.id === rt.id))];
+    }
+    
+    return tasks; 
+  };
   const visibleTasks = getVisibleTasks();
-  const columns = [{ id: 'today', title: 'Today' }, { id: 'thisWeek', title: 'This Week' }, { id: 'waiting', title: 'Waiting' }, { id: 'review', title: 'Review' }, { id: 'later', title: 'Later' }, { id: 'done', title: 'Done' }];
+  const columns = [{ id: 'today', title: 'Today' }, { id: 'thisWeek', title: 'This Week' }, { id: 'waiting', title: 'Waiting / Follow-up' }, { id: 'review', title: 'To Be Reviewed' }, { id: 'later', title: 'Later' }, { id: 'done', title: 'Done' }];
 
   const handleDrop = (columnId) => { if (draggedTask) { setKanbanTasks(prev => prev.map(t => t.id === draggedTask.id ? { ...t, column: columnId } : t)); setDraggedTask(null); setDragOverColumn(null); setDragOverTaskId(null); } };
   const handleTaskUpdate = (updated) => { setKanbanTasks(prev => prev.map(t => t.id === updated.id ? updated : t)); if (updated.type === 'sc' && updated.buildingTaskId) { if (updated.scStatus === 'pendingArrival') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Supply Chain Pending Arrival', expectedArrival: updated.expectedArrival } : t)); if (updated.scStatus === 'readyToStart' || updated.column === 'done') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Ready to start (Supply Chain confirmed on-site)' } : t)); } };
@@ -378,11 +779,51 @@ export default function Home() {
   const handleRowDragStart = (e, task, subCat) => { setDraggedRow({ ...task, subCategory: subCat }); e.dataTransfer.effectAllowed = 'move'; };
   const handleRowDragOver = (e, task) => { e.preventDefault(); if (draggedRow && task.id !== draggedRow.id) setDragOverRow(task.id); };
   const handleRowDrop = (e, targetTask, catTasks) => { e.preventDefault(); if (!draggedRow || draggedRow.subCategory !== targetTask.subCategory) { setDraggedRow(null); setDragOverRow(null); return; } const fromIndex = catTasks.findIndex(t => t.id === draggedRow.id); const toIndex = catTasks.findIndex(t => t.id === targetTask.id); if (fromIndex !== -1 && toIndex !== -1) { const newOrder = [...catTasks]; const [moved] = newOrder.splice(fromIndex, 1); newOrder.splice(toIndex, 0, moved); setBuildingTasks(prev => { const updated = [...prev]; newOrder.forEach((t, i) => { const idx = updated.findIndex(x => x.id === t.id); if (idx !== -1) updated[idx] = { ...updated[idx], order: i + 1 }; }); return updated; }); } setDraggedRow(null); setDragOverRow(null); };
-  const handleDeleteBuildingTask = (id) => setBuildingTasks(prev => prev.filter(t => t.id !== id));
-  const handleAddStep = (subCat, data) => { const maxOrder = Math.max(0, ...buildingTasks.filter(t => t.subCategory === subCat).map(t => t.order)); setBuildingTasks(prev => [...prev, { id: Date.now(), order: maxOrder + 1, villa: currentVilla, mainCategory: '2 Foundation', subCategory: subCat, task: data.task, step: data.step, notes: '', status: 'Ready to start (Supply Chain confirmed on-site)', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' }]); };
-  const handleAddPhase = (data) => { setBuildingTasks(prev => [...prev, { id: Date.now(), order: 1, villa: currentVilla, mainCategory: data.mainCat, subCategory: data.subCat, task: '', step: 'New step', notes: '', status: 'Ready to start (Supply Chain confirmed on-site)', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' }]); };
+  const handleDeleteBuildingTask = (id) => {
+    if (currentUser.isAdmin) {
+      setBuildingTasks(prev => prev.filter(t => t.id !== id));
+    } else {
+      const task = buildingTasks.find(t => t.id === id);
+      proposeChange('delete', { taskId: id, villa: task?.villa, subCategory: task?.subCategory, step: task?.step });
+    }
+  };
+  const handleAddStep = (subCat, data) => { 
+    const maxOrder = Math.max(0, ...buildingTasks.filter(t => t.subCategory === subCat).map(t => t.order)); 
+    const newTask = { id: Date.now(), order: maxOrder + 1, villa: currentVilla, mainCategory: '2 Foundation', subCategory: subCat, task: data.task, step: data.step, notes: '', status: 'Ready to start (Supply Chain confirmed on-site)', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' };
+    if (currentUser.isAdmin) {
+      setBuildingTasks(prev => [...prev, newTask]); 
+    } else {
+      proposeChange('add_step', { villa: currentVilla, subCategory: subCat, newTask });
+    }
+  };
+  const handleAddPhase = (data) => { 
+    const newTask = { id: Date.now(), order: 1, villa: currentVilla, mainCategory: data.mainCat, subCategory: data.subCat, task: '', step: 'New step', notes: '', status: 'Ready to start (Supply Chain confirmed on-site)', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' };
+    if (currentUser.isAdmin) {
+      setBuildingTasks(prev => [...prev, newTask]); 
+    } else {
+      proposeChange('add_phase', { villa: currentVilla, mainCategory: data.mainCat, subCategory: data.subCat, newTask });
+    }
+  };
+  const handleAddSequence = (label) => {
+    const id = label.toLowerCase().replace(/\s+/g, '-');
+    if (currentUser.isAdmin) {
+      setBuildingSequences(prev => [...prev, { id, label }]);
+    } else {
+      proposeChange('add_sequence', { sequenceId: id, sequenceLabel: label });
+    }
+  };
 
-  const navItems = [{ id: 'taskBoard', label: 'Task Board', icon: 'kanban' }, { id: 'recurring', label: 'Recurring Tasks', icon: 'repeat' }, { id: 'sequence', label: 'Building Sequence', icon: 'list', subItems: [{ id: 'sequence-villa3', label: 'Villa 3' }, { id: 'sequence-villa2', label: 'Villa 2' }, { id: 'sequence-villa1', label: 'Villa 1' }, { id: 'sequence-landscaping', label: 'Landscaping' }] }, { id: 'schedule', label: 'Schedule', icon: 'calendar' }, { id: 'workers', label: 'Workforce', icon: 'users' }, { id: 'materials', label: 'Materials', icon: 'package' }, { id: 'reports', label: 'Reports', icon: 'chart' }];
+  const pendingCount = pendingChanges.filter(p => p.status === 'pending').length;
+  const navItems = [
+    { id: 'taskBoard', label: 'Task Board', icon: 'kanban' }, 
+    { id: 'recurring', label: 'Recurring Tasks', icon: 'repeat' }, 
+    { id: 'sequence', label: 'Building Sequence', icon: 'list', subItems: buildingSequences.map(s => ({ id: `sequence-${s.id}`, label: s.label })) }, 
+    ...(currentUser.isAdmin && pendingCount > 0 ? [{ id: 'pendingApprovals', label: `Pending Approvals (${pendingCount})`, icon: 'check' }] : []),
+    { id: 'schedule', label: 'Daily Worker Schedule', icon: 'calendar' }, 
+    { id: 'workers', label: 'Workforce', icon: 'users' }, 
+    { id: 'materials', label: 'Materials', icon: 'package' }, 
+    { id: 'reports', label: 'Reports', icon: 'chart' }
+  ];
 
   const currentVilla = activeNav === 'sequence-villa3' ? 'Villa 3' : activeNav === 'sequence-villa2' ? 'Villa 2' : activeNav === 'sequence-villa1' ? 'Villa 1' : activeNav === 'sequence-landscaping' ? 'Landscaping' : null;
   const filteredBuildingTasks = currentVilla ? buildingTasks.filter(t => t.villa === currentVilla).filter(t => !search || t.step.toLowerCase().includes(search.toLowerCase()) || t.task.toLowerCase().includes(search.toLowerCase())) : [];
@@ -417,7 +858,7 @@ export default function Home() {
       {/* Main Content */}
       <main style={{ flex: 1, overflowY: 'auto', padding: '24px', marginLeft: sidebarOpen ? '260px' : '0', paddingTop: sidebarOpen ? '24px' : '84px', transition: 'margin-left 0.3s ease' }}>
         {/* Task Board */}
-        {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{isManager && !selectedTaskUser ? 'All Tasks' : 'My Tasks'}</p></div><select value={selectedTaskUser || (isManager ? 'all' : '')} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : e.target.value ? Number(e.target.value) : null)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="">My Tasks</option>{isManager && <option value="all">All Tasks</option>}{users.filter(u => u.id !== currentUser.id).map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div><button type="button" onClick={handleAddTask} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} />)}</div></>)}
+        {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{isManager && !selectedTaskUser ? 'All Tasks' : 'My Tasks'}</p></div><select value={selectedTaskUser || (isManager ? 'all' : '')} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : e.target.value ? Number(e.target.value) : null)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="">My Tasks</option>{isManager && <option value="all">All Tasks</option>}{users.filter(u => u.id !== currentUser.id).map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div><button type="button" onClick={handleAddTask} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} currentUserId={currentUser.id} />)}</div></>)}
 
         {/* Recurring Tasks */}
         {activeNav === 'recurring' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Recurring Tasks</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredRecurring.length} tasks</p></div><select value={recurringFilter} onChange={e => setRecurringFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="all">All People</option>{users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div><button type="button" onClick={() => setRecurringModal({})} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add</button></div>
@@ -425,19 +866,261 @@ export default function Home() {
         </>)}
 
         {/* Building Sequence */}
-        {activeNav.startsWith('sequence-') && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>{currentVilla}</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredBuildingTasks.length} steps</p></div><div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}><input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: '160px', padding: '10px 16px', border: '1px solid #e5e7eb', borderRadius: '10px' }} /><button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add Phase</button></div></div>
-          {Object.entries(grouped).map(([subCat, catTasks]) => (<div key={subCat} style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>{subCat}</h3><span style={{ fontSize: '12px', color: '#6b7280' }}>{catTasks.length} steps</span></div><button type="button" onClick={() => setAddStepModal(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: '#fafafa' }}>{['', 'Readiness', 'Status', 'Task', 'Step', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; return (<tr key={t.id} draggable onDragStart={(e) => handleRowDragStart(e, t, subCat)} onDragOver={(e) => handleRowDragOver(e, t)} onDrop={(e) => handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '30px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div></td><td style={{ padding: '8px' }}>{r.type !== 'sequenced' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={options.task[subCat] || []} onChange={v => setBuildingTasks(p => p.map(x => x.id === t.id ? { ...x, task: v } : x))} placeholder="Task" /></td><td style={{ padding: '8px' }}><EditableCell value={t.step} onChange={v => setBuildingTasks(p => p.map(x => x.id === t.id ? { ...x, step: v } : x))} placeholder="Step" /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => setBuildingTasks(p => p.map(x => x.id === t.id ? { ...x, notes: v } : x))} placeholder="Notes" /></td><td style={{ padding: '8px' }}><input type="date" value={t.earliestStart || ''} onChange={e => setBuildingTasks(p => p.map(x => x.id === t.id ? { ...x, earliestStart: e.target.value } : x))} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => setBuildingTasks(p => p.map(x => x.id === t.id ? { ...x, expectedArrival: e.target.value } : x))} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.duration} onChange={v => setBuildingTasks(p => p.map(x => x.id === t.id ? { ...x, duration: v } : x))} placeholder="0:00" /></td><td style={{ padding: '8px' }}><MultiSelect values={t.skilledWorkers} options={options.skilledWorker} onChange={v => setBuildingTasks(p => p.map(x => x.id === t.id ? { ...x, skilledWorkers: v } : x))} placeholder="Select..." /></td><td style={{ padding: '8px' }}><MultiSelect values={t.unskilledWorkers} options={options.unskilledWorker} onChange={v => setBuildingTasks(p => p.map(x => x.id === t.id ? { ...x, unskilledWorkers: v } : x))} placeholder="Select..." /></td><td style={{ padding: '8px' }}><button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button></td><td style={{ padding: '8px' }}><button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button></td></tr>); })}</tbody></table></div></div>))}
+        {activeNav.startsWith('sequence-') && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>{currentVilla}</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredBuildingTasks.length} steps {!currentUser.isAdmin && <span style={{ fontSize: '12px', color: '#f59e0b' }}>(Your edits require approval)</span>}</p></div><div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}><input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: '160px', padding: '10px 16px', border: '1px solid #e5e7eb', borderRadius: '10px' }} /><button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add Phase</button>{currentUser.isAdmin && <button type="button" onClick={() => setAddSequenceModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add Sequence</button>}</div></div>
+          {Object.entries(grouped).map(([subCat, catTasks]) => (<div key={subCat} style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>{subCat}</h3><span style={{ fontSize: '12px', color: '#6b7280' }}>{catTasks.length} steps</span></div><button type="button" onClick={() => setAddStepModal(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: '#fafafa' }}>{['', 'Readiness', 'Status', 'Task', 'Step', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; return (<tr key={t.id} draggable onDragStart={(e) => handleRowDragStart(e, t, subCat)} onDragOver={(e) => handleRowDragOver(e, t)} onDrop={(e) => handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '30px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div></td><td style={{ padding: '8px' }}>{r.type !== 'sequenced' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={options.task[subCat] || []} onChange={v => editBuildingTask(t.id, 'task', v)} placeholder="Task" /></td><td style={{ padding: '8px' }}><EditableCell value={t.step} onChange={v => editBuildingTask(t.id, 'step', v)} placeholder="Step" /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => editBuildingTask(t.id, 'notes', v)} placeholder="Notes" /></td><td style={{ padding: '8px' }}><input type="date" value={t.earliestStart || ''} onChange={e => editBuildingTask(t.id, 'earliestStart', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => editBuildingTask(t.id, 'expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.duration} onChange={v => editBuildingTask(t.id, 'duration', v)} placeholder="0:00" /></td><td style={{ padding: '8px' }}><MultiSelect values={t.skilledWorkers} options={options.skilledWorker} onChange={v => editBuildingTask(t.id, 'skilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><MultiSelect values={t.unskilledWorkers} options={options.unskilledWorker} onChange={v => editBuildingTask(t.id, 'unskilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button></td><td style={{ padding: '8px' }}><button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button></td></tr>); })}</tbody></table></div></div>))}
+        </>)}
+
+        {/* Daily Worker Schedule */}
+        {activeNav === 'schedule' && (<>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}>
+            <div>
+              <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Daily Worker Schedule</h1>
+              <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Assign workers from Building Sequence</p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <button type="button" onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d.toISOString().split('T')[0]); }} style={{ padding: '8px 12px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>←</button>
+              <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={{ padding: '10px 16px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '14px' }} />
+              <button type="button" onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d.toISOString().split('T')[0]); }} style={{ padding: '8px 12px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>→</button>
+            </div>
+          </div>
+          
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {/* Skilled Workers */}
+            <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0, color: '#059669' }}>Skilled Workers</h3>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#fafafa' }}>
+                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', width: '150px' }}>WORKER</th>
+                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left' }}>ASSIGNED TASKS</th>
+                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>PLANNED</th>
+                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>ACTUAL</th>
+                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workforce.filter(w => w.type === 'skilled' && w.status === 'active').map(worker => {
+                      const assignedTasks = buildingTasks.filter(t => (t.skilledWorkers || []).includes(worker.name) && (t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)'));
+                      const totalHours = assignedTasks.reduce((sum, t) => sum + (parseFloat(t.duration) || 0), 0);
+                      const hasWork = assignedTasks.length > 0;
+                      return (
+                        <tr key={worker.id} style={{ borderBottom: '1px solid #f3f4f6', background: !hasWork ? '#fef2f2' : 'transparent' }}>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#059669', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>{worker.name.charAt(0).toUpperCase()}</div>
+                              <div><div style={{ fontSize: '13px', fontWeight: '500' }}>{worker.name}</div><div style={{ fontSize: '11px', color: '#9ca3af' }}>{worker.hourlyRate} THB/hr</div></div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            {assignedTasks.length === 0 ? <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: '500' }}>⚠️ No work assigned</span> : (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {assignedTasks.map(t => <span key={t.id} style={{ fontSize: '11px', padding: '4px 8px', background: '#ecfdf5', color: '#059669', borderRadius: '4px' }}>{t.step} ({t.villa})</span>)}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '13px', fontWeight: '600', color: totalHours > 0 ? '#059669' : '#dc2626' }}>{totalHours > 0 ? `${totalHours}h` : '0h'}</td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}><input type="number" step="0.5" min="0" placeholder="0" style={{ width: '60px', padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', textAlign: 'center', fontSize: '13px' }} /></td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>{hasWork ? <span style={{ fontSize: '11px', padding: '4px 8px', background: '#ecfdf5', color: '#059669', borderRadius: '4px' }}>Assigned</span> : <span style={{ fontSize: '11px', padding: '4px 8px', background: '#fef2f2', color: '#dc2626', borderRadius: '4px' }}>Unassigned</span>}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Unskilled Workers */}
+            <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0, color: '#6b7280' }}>Unskilled Workers</h3>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#fafafa' }}>
+                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', width: '150px' }}>WORKER</th>
+                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left' }}>ASSIGNED TASKS</th>
+                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>PLANNED</th>
+                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>ACTUAL</th>
+                      <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center', width: '80px' }}>STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workforce.filter(w => w.type === 'unskilled' && w.status === 'active').map(worker => {
+                      const assignedTasks = buildingTasks.filter(t => (t.unskilledWorkers || []).includes(worker.name) && (t.status === 'In Progress' || t.status === 'Ready to start (Supply Chain confirmed on-site)'));
+                      const totalHours = assignedTasks.reduce((sum, t) => sum + (parseFloat(t.duration) || 0), 0);
+                      const hasWork = assignedTasks.length > 0;
+                      return (
+                        <tr key={worker.id} style={{ borderBottom: '1px solid #f3f4f6', background: !hasWork ? '#fef2f2' : 'transparent' }}>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#6b7280', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>{worker.name.charAt(0).toUpperCase()}</div>
+                              <div><div style={{ fontSize: '13px', fontWeight: '500' }}>{worker.name}</div><div style={{ fontSize: '11px', color: '#9ca3af' }}>{worker.hourlyRate} THB/hr</div></div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            {assignedTasks.length === 0 ? <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: '500' }}>⚠️ No work assigned</span> : (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {assignedTasks.map(t => <span key={t.id} style={{ fontSize: '11px', padding: '4px 8px', background: '#f3f4f6', color: '#6b7280', borderRadius: '4px' }}>{t.step} ({t.villa})</span>)}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '13px', fontWeight: '600', color: totalHours > 0 ? '#059669' : '#dc2626' }}>{totalHours > 0 ? `${totalHours}h` : '0h'}</td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}><input type="number" step="0.5" min="0" placeholder="0" style={{ width: '60px', padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', textAlign: 'center', fontSize: '13px' }} /></td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>{hasWork ? <span style={{ fontSize: '11px', padding: '4px 8px', background: '#ecfdf5', color: '#059669', borderRadius: '4px' }}>Assigned</span> : <span style={{ fontSize: '11px', padding: '4px 8px', background: '#fef2f2', color: '#dc2626', borderRadius: '4px' }}>Unassigned</span>}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </>)}
+
+        {/* Workforce */}
+        {activeNav === 'workers' && (<>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}>
+            <div>
+              <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Workforce</h1>
+              <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{workforce.length} workers</p>
+            </div>
+            <button type="button" onClick={() => setWorkerModal({ id: '', name: '', type: 'skilled', hourlyRate: 100, status: 'active', debt: 0, debtDescription: '', repaymentFrequency: 'none' })} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Worker</button>
+          </div>
+          
+          <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#fafafa' }}>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left' }}>NAME</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left' }}>TYPE</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'right' }}>HOURLY RATE</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'right' }}>DEBT</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left' }}>DEBT DESCRIPTION</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left' }}>REPAYMENT</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center' }}>STATUS</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'center' }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workforce.map(worker => (
+                    <tr key={worker.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: worker.type === 'skilled' ? '#059669' : '#6b7280', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '600' }}>{worker.name.charAt(0).toUpperCase()}</div>
+                          <span style={{ fontSize: '14px', fontWeight: '500' }}>{worker.name}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}><span style={{ fontSize: '12px', padding: '4px 10px', background: worker.type === 'skilled' ? '#ecfdf5' : '#f3f4f6', color: worker.type === 'skilled' ? '#059669' : '#6b7280', borderRadius: '20px', fontWeight: '500', textTransform: 'capitalize' }}>{worker.type}</span></td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', fontWeight: '500' }}>{worker.hourlyRate} THB</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', fontWeight: '500', color: worker.debt > 0 ? '#dc2626' : '#16a34a' }}>{worker.debt > 0 ? `-${worker.debt.toLocaleString()} THB` : '0 THB'}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#6b7280' }}>{worker.debtDescription || '-'}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#6b7280', textTransform: 'capitalize' }}>{worker.repaymentFrequency === 'none' ? '-' : worker.repaymentFrequency}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}><span style={{ fontSize: '11px', padding: '4px 10px', background: worker.status === 'active' ? '#ecfdf5' : '#f3f4f6', color: worker.status === 'active' ? '#059669' : '#9ca3af', borderRadius: '20px', fontWeight: '500', textTransform: 'capitalize' }}>{worker.status}</span></td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}><button type="button" onClick={() => setWorkerModal(worker)} style={{ padding: '6px 12px', fontSize: '12px', background: '#f3f4f6', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#6b7280' }}>Edit</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>)}
+
+        {/* Pending Approvals (Admin only) */}
+        {activeNav === 'pendingApprovals' && currentUser.isAdmin && (<>
+          <div style={{ marginBottom: '24px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Pending Approvals</h1>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Review proposed changes to Building Sequence</p>
+          </div>
+          
+          {pendingChanges.filter(c => c.status === 'pending').length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '40vh', color: '#9ca3af' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✓</div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#6b7280', margin: 0 }}>All caught up!</h3>
+              <p style={{ fontSize: '14px', margin: '8px 0 0' }}>No pending changes to review</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {pendingChanges.filter(c => c.status === 'pending').map(change => {
+                const requestedByUser = users.find(u => u.id === change.requestedBy);
+                const task = change.taskId ? buildingTasks.find(t => t.id === change.taskId) : null;
+                return (
+                  <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <img src={requestedByUser?.avatar} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600' }}>{requestedByUser?.username}</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>{formatTime(change.timestamp)}</div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '11px', padding: '4px 10px', background: '#fef3c7', color: '#d97706', borderRadius: '20px', fontWeight: '600' }}>Pending</span>
+                    </div>
+                    
+                    <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                      {change.type === 'edit' && `Change ${change.field}: "${change.oldValue || '(empty)'}" → "${change.newValue}"`}
+                      {change.type === 'add_step' && `Add new step: "${change.newTask?.step}" to ${change.subCategory}`}
+                      {change.type === 'add_phase' && `Add new phase: ${change.subCategory}`}
+                      {change.type === 'delete' && `Delete step: "${change.step}"`}
+                      {change.type === 'add_sequence' && `Add new building sequence: "${change.sequenceLabel}"`}
+                    </div>
+                    
+                    {change.villa && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>📍 {change.villa} → {change.subCategory}</div>}
+                    
+                    {change.comments?.length > 0 && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>💬 {change.comments.length} comment(s)</div>}
+                    
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setPendingReviewModal(change)} style={{ padding: '8px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Review Details</button>
+                      <button type="button" onClick={() => approveChange(change.id)} style={{ padding: '8px 16px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Approve</button>
+                      <button type="button" onClick={() => rejectChange(change.id)} style={{ padding: '8px 16px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>✕ Reject</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          
+          {/* History of past approvals/rejections */}
+          {pendingChanges.filter(c => c.status !== 'pending').length > 0 && (
+            <div style={{ marginTop: '32px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#6b7280' }}>History</h3>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {pendingChanges.filter(c => c.status !== 'pending').slice(-10).reverse().map(change => {
+                  const requestedByUser = users.find(u => u.id === change.requestedBy);
+                  return (
+                    <div key={change.id} style={{ background: '#f9fafb', borderRadius: '8px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img src={requestedByUser?.avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: '500' }}>{change.type} by {requestedByUser?.username}</div>
+                          <div style={{ fontSize: '11px', color: '#9ca3af' }}>{formatTime(change.timestamp)}</div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '11px', padding: '4px 10px', background: change.status === 'approved' ? '#ecfdf5' : '#fef2f2', color: change.status === 'approved' ? '#059669' : '#dc2626', borderRadius: '20px', fontWeight: '600', textTransform: 'capitalize' }}>{change.status}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>)}
 
         {/* Placeholder pages */}
-        {['schedule', 'workers', 'materials', 'reports'].includes(activeNav) && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#9ca3af' }}><h2 style={{ fontSize: '24px', fontWeight: '600', color: '#6b7280' }}>{navItems.find(n => n.id === activeNav)?.label}</h2><p>Coming soon</p></div>}
+        {['materials', 'reports'].includes(activeNav) && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#9ca3af' }}><h2 style={{ fontSize: '24px', fontWeight: '600', color: '#6b7280' }}>{navItems.find(n => n.id === activeNav)?.label}</h2><p>Coming soon</p></div>}
       </main>
 
       {/* Modals & Panels */}
-      {taskModal && <TaskModal task={taskModal} onClose={() => setTaskModal(null)} onUpdate={handleTaskUpdate} onDelete={handleTaskDelete} users={users} buildingTasks={buildingTasks} />}
+      {taskModal && <TaskModal task={taskModal} onClose={() => setTaskModal(null)} onUpdate={handleTaskUpdate} onDelete={handleTaskDelete} users={users} buildingTasks={buildingTasks} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
       {recurringModal && <RecurringTaskModal task={recurringModal.id ? recurringModal : null} onClose={() => setRecurringModal(null)} onSave={handleRecurringSave} onDelete={handleRecurringDelete} users={users} />}
       {addStepModal && <AddStepModal isOpen={!!addStepModal} onClose={() => setAddStepModal(null)} onAdd={(data) => handleAddStep(addStepModal, data)} subCategory={addStepModal} options={options} setOptions={setOptions} />}
       {addPhaseModal && <AddPhaseModal isOpen={addPhaseModal} onClose={() => setAddPhaseModal(false)} onAdd={handleAddPhase} villa={currentVilla} options={options} />}
+      {workerModal && <WorkerModal worker={workerModal.id ? workerModal : null} onClose={() => setWorkerModal(null)} onSave={(w) => { if (w.id && workforce.find(x => x.id === w.id)) { setWorkforce(prev => prev.map(x => x.id === w.id ? w : x)); } else { setWorkforce(prev => [...prev, w]); } }} onDelete={(id) => setWorkforce(prev => prev.filter(w => w.id !== id))} options={options} setOptions={setOptions} />}
+      {addSequenceModal && <AddSequenceModal onClose={() => setAddSequenceModal(false)} onAdd={handleAddSequence} />}
+      {pendingReviewModal && <PendingReviewModal change={pendingReviewModal} onClose={() => setPendingReviewModal(null)} onApprove={approveChange} onReject={rejectChange} onComment={addChangeComment} users={users} buildingTasks={buildingTasks} />}
       {activeComments && <CommentsPanel taskId={activeComments} task={activeTask} comments={comments} setComments={setComments} currentUser={currentUser} users={users} onClose={() => setActiveComments(null)} setNotifications={setNotifications} />}
       {showNotifications && <NotificationsPanel notifications={notifications.filter(n => n.userId === currentUser.id)} setNotifications={setNotifications} users={users} onClose={() => setShowNotifications(false)} onGoToTask={(id) => { setActiveComments(id); setShowNotifications(false); }} />}
     </div>
