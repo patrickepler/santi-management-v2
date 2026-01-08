@@ -1,8 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useUser, SignIn, SignOutButton } from '@clerk/nextjs';
-// TODO: Uncomment after running supabase-schema.sql
-// import { db, supabase, subscribeToAll } from './lib/supabase';
+import { db, supabase } from '../lib/supabase';
 
 // ============ USERS ============
 const mockUsers = [
@@ -1079,7 +1078,9 @@ export default function Home() {
   const [users] = useState(mockUsers);
   const [demoMode, setDemoMode] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [useSupabase, setUseSupabase] = useState(false); // Will enable after Supabase setup
+  const [supabaseLoading, setSupabaseLoading] = useState(true);
+  const [supabaseError, setSupabaseError] = useState(null);
+  const saveTimeoutRef = useRef(null);
   
   // Load saved data from localStorage initially (will be overwritten by Supabase if available)
   const [savedData] = useState(() => loadFromStorage());
@@ -1141,8 +1142,56 @@ export default function Home() {
   // Close sidebar on mobile by default
   useEffect(() => { if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false); }, []);
 
-  // Save data to localStorage whenever key state changes
+  // Load data from Supabase on mount
   useEffect(() => {
+    const loadFromSupabase = async () => {
+      try {
+        setSupabaseLoading(true);
+        setSupabaseError(null);
+        
+        const data = await db.loadAllData();
+        
+        // Only update state if we got data back
+        if (data.buildingTasks && data.buildingTasks.length > 0) {
+          setBuildingTasks(data.buildingTasks);
+        }
+        if (data.kanbanTasks && data.kanbanTasks.length > 0) {
+          setKanbanTasks(data.kanbanTasks);
+        }
+        if (data.recurringTasks && data.recurringTasks.length > 0) {
+          setRecurringTasks(data.recurringTasks);
+        }
+        if (data.comments && Object.keys(data.comments).length > 0) {
+          setComments(data.comments);
+        }
+        if (data.workforce && data.workforce.length > 0) {
+          setWorkforce(data.workforce);
+        }
+        if (data.options && Object.keys(data.options).length > 0) {
+          setOptions(data.options);
+        }
+        if (data.buildingSequences && data.buildingSequences.standalone) {
+          setBuildingSequences(data.buildingSequences);
+        }
+        
+        console.log('✅ Loaded data from Supabase');
+        setDataLoaded(true);
+      } catch (err) {
+        console.error('❌ Error loading from Supabase:', err);
+        setSupabaseError(err.message);
+        // Fall back to localStorage data (already loaded)
+        console.log('📦 Using localStorage fallback');
+      } finally {
+        setSupabaseLoading(false);
+      }
+    };
+    
+    loadFromSupabase();
+  }, []);
+
+  // Save data to Supabase (debounced) and localStorage whenever key state changes
+  useEffect(() => {
+    // Always save to localStorage immediately
     saveToStorage({
       buildingTasks,
       kanbanTasks,
@@ -1153,9 +1202,36 @@ export default function Home() {
       workforce,
       buildingSequences
     });
+    
+    // Debounce Supabase saves to avoid too many requests
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await db.saveAllData({
+          buildingTasks,
+          kanbanTasks,
+          recurringTasks,
+          workforce,
+          options,
+          buildingSequences
+        });
+        console.log('💾 Saved to Supabase');
+      } catch (err) {
+        console.error('❌ Error saving to Supabase:', err);
+      }
+    }, 2000); // Wait 2 seconds after last change before saving
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, buildingSequences]);
 
-  if (!isLoaded) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}><div style={{ color: '#fff', fontSize: '18px' }}>Loading...</div></div>;
+  if (!isLoaded || supabaseLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}><div style={{ color: '#fff', fontSize: '18px' }}>{supabaseLoading ? '🔄 Syncing with database...' : 'Loading...'}</div>{supabaseError && <div style={{ color: '#fef3c7', fontSize: '14px' }}>⚠️ Using offline mode</div>}</div>;
   if (!isSignedIn && !demoMode) return <LoginScreen onDemoLogin={() => setDemoMode(true)} />;
 
   const isManager = currentUser.role === 'manager';
