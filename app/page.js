@@ -66,6 +66,9 @@ const generateRecurringTaskInstances = () => {
   
   const tasks = [];
   initialRecurringTasks.forEach(rt => {
+    // Skip paused or archived tasks
+    if (rt.status === 'paused' || rt.status === 'archived') return;
+    
     checkDays.forEach(dateStr => {
       const checkDate = new Date(dateStr);
       const checkDayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][checkDate.getDay()];
@@ -446,8 +449,8 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
   );
 };
 
-const RecurringTaskModal = ({ task, onClose, onSave, onDelete, users, comments, setComments, currentUser, setNotifications }) => {
-  const [form, setForm] = useState(task || { title: '', assignedTo: 1, frequency: 'daily', days: [], specificDates: [], estTime: 1, notes: '' });
+const RecurringTaskModal = ({ task, onClose, onSave, onDelete, onArchive, users, comments, setComments, currentUser, setNotifications }) => {
+  const [form, setForm] = useState(task || { title: '', assignedTo: 1, frequency: 'daily', days: [], specificDates: [], estTime: 1, notes: '', status: 'active' });
   const [newComment, setNewComment] = useState('');
   const toggleDay = (day) => setForm(f => ({ ...f, days: f.days.includes(day) ? f.days.filter(d => d !== day) : [...f.days, day] }));
   
@@ -460,18 +463,37 @@ const RecurringTaskModal = ({ task, onClose, onSave, onDelete, users, comments, 
     setNewComment('');
   };
   
+  const isArchived = form.status === 'archived';
+  const isPaused = form.status === 'paused';
+  
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
       <div style={{ width: '100%', maxWidth: '550px', maxHeight: '90vh', background: '#fff', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '11px', padding: '4px 10px', background: '#f3e8ff', color: '#7c3aed', borderRadius: '4px', fontWeight: '600' }}>↻ Recurring</span>
+            {isArchived && <span style={{ fontSize: '11px', padding: '4px 8px', background: '#f3f4f6', color: '#6b7280', borderRadius: '4px' }}>Archived</span>}
+            {isPaused && <span style={{ fontSize: '11px', padding: '4px 8px', background: '#fef3c7', color: '#d97706', borderRadius: '4px' }}>Paused</span>}
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>{task?.id ? 'Edit' : 'New'} Recurring Task</h2>
           </div>
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><Icon name="x" /></button>
         </div>
         
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+          {/* Status toggle for existing tasks */}
+          {task?.id && (
+            <div style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '8px' }}>Status</label>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => setForm({ ...form, status: 'active' })} style={{ padding: '6px 12px', fontSize: '12px', border: form.status === 'active' ? '2px solid #059669' : '1px solid #e5e7eb', borderRadius: '6px', background: form.status === 'active' ? '#ecfdf5' : '#fff', color: form.status === 'active' ? '#059669' : '#6b7280', cursor: 'pointer' }}>✓ Active</button>
+                <button type="button" onClick={() => setForm({ ...form, status: 'paused' })} style={{ padding: '6px 12px', fontSize: '12px', border: form.status === 'paused' ? '2px solid #d97706' : '1px solid #e5e7eb', borderRadius: '6px', background: form.status === 'paused' ? '#fef3c7' : '#fff', color: form.status === 'paused' ? '#d97706' : '#6b7280', cursor: 'pointer' }}>⏸ Paused</button>
+                <button type="button" onClick={() => setForm({ ...form, status: 'archived' })} style={{ padding: '6px 12px', fontSize: '12px', border: form.status === 'archived' ? '2px solid #6b7280' : '1px solid #e5e7eb', borderRadius: '6px', background: form.status === 'archived' ? '#f3f4f6' : '#fff', color: '#6b7280', cursor: 'pointer' }}>📦 Archived</button>
+              </div>
+              {isPaused && <p style={{ fontSize: '11px', color: '#d97706', marginTop: '8px', margin: '8px 0 0' }}>Paused tasks won't generate new daily tasks but stay visible</p>}
+              {isArchived && <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '8px', margin: '8px 0 0' }}>Archived tasks are hidden and won't generate tasks</p>}
+            </div>
+          )}
+          
           <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Title</label><input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
@@ -518,8 +540,13 @@ const RecurringTaskModal = ({ task, onClose, onSave, onDelete, users, comments, 
         </div>
         
         <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
-          {task?.id ? <button type="button" onClick={() => { onDelete(task.id); onClose(); }} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button> : <div />}
-          <div style={{ display: 'flex', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { onSave(form); onClose(); }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button></div>
+          {task?.id ? (
+            <button type="button" onClick={() => { if (confirm('Permanently delete this recurring task?')) { onDelete(task.id); onClose(); }}} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Delete Forever</button>
+          ) : <div />}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
+            <button type="button" onClick={() => { onSave(form); onClose(); }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button>
+          </div>
         </div>
       </div>
     </div>
@@ -528,16 +555,17 @@ const RecurringTaskModal = ({ task, onClose, onSave, onDelete, users, comments, 
 
 // ============ ADD STEP MODAL ============
 // ============ ADD PHASE MODAL - Simplified for quick multi-add ============
-const AddPhaseModal = ({ isOpen, onClose, onAdd, villa, options, setOptions }) => {
+const AddPhaseModal = ({ isOpen, onClose, onAdd, villa, options }) => {
   const [phaseName, setPhaseName] = useState('');
   const [addedPhases, setAddedPhases] = useState([]);
-  const [mainCat, setMainCat] = useState(options.mainCategory[0] || '');
   
   if (!isOpen) return null;
   
   const handleAddPhase = () => {
     if (phaseName.trim()) {
       const name = phaseName.trim();
+      // Use first category as default, or "General" if none
+      const mainCat = options.mainCategory[0] || 'General';
       onAdd({ mainCat, subCat: name });
       setAddedPhases(prev => [...prev, name]);
       setPhaseName('');
@@ -553,27 +581,18 @@ const AddPhaseModal = ({ isOpen, onClose, onAdd, villa, options, setOptions }) =
   
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '450px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
-        <h2 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '600' }}>Add Phases to {villa}</h2>
-        <p style={{ margin: '0 0 20px', fontSize: '12px', color: '#6b7280' }}>Type a name and press Enter to add. Add as many as you need.</p>
-        
-        {/* Main Category - Simple select */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Category (optional)</label>
-          <select value={mainCat} onChange={e => setMainCat(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>
-            {options.mainCategory.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </div>
+      <div style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+        <h2 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '600' }}>Add Phase to {villa}</h2>
+        <p style={{ margin: '0 0 20px', fontSize: '12px', color: '#6b7280' }}>Type a name and press Enter. Add as many as you need.</p>
         
         {/* Phase Name - Quick input */}
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Phase Name</label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input 
               value={phaseName} 
               onChange={e => setPhaseName(e.target.value)} 
               onKeyDown={handleKeyDown}
-              placeholder="e.g., Dig Trenches, Install Wiring, Plaster Walls" 
+              placeholder="e.g., Dig Trenches, Install Wiring..." 
               style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} 
               autoFocus
             />
@@ -1030,17 +1049,62 @@ const EditableCell = ({ value, onChange, placeholder }) => { const [editing, set
 const MultiSelect = ({ values = [], options, onChange, placeholder }) => { const [open, setOpen] = useState(false); const ref = useRef(null); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); const toggle = (opt) => onChange(values.includes(opt) ? values.filter(v => v !== opt) : [...values, opt]); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ width: '100%', padding: '6px 10px', fontSize: '12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', textAlign: 'left', cursor: 'pointer', color: values.length ? '#1f2937' : '#9ca3af', minHeight: '32px' }}>{values.length ? values.join(', ') : placeholder}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '200px', overflowY: 'auto' }}><div onClick={() => onChange([])} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #e5e7eb', color: '#dc2626', fontSize: '12px' }}>Clear all</div>{options.map((o, i) => <div key={i} onClick={() => toggle(o)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer', background: values.includes(o) ? '#ecfdf5' : 'transparent' }}><span style={{ width: '16px', height: '16px', border: values.includes(o) ? '2px solid #059669' : '1px solid #d1d5db', borderRadius: '4px', background: values.includes(o) ? '#059669' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px' }}>{values.includes(o) && '✓'}</span>{o}</div>)}</div>}</div>); };
 
 // ============ MAIN APP ============
+// LocalStorage helpers
+const STORAGE_KEY = 'santi_management_data';
+
+const loadFromStorage = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch (e) {
+    console.error('Error loading from localStorage:', e);
+    return null;
+  }
+};
+
+const saveToStorage = (data) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving to localStorage:', e);
+  }
+};
+
 export default function Home() {
   const { isLoaded, isSignedIn, user: clerkUser } = useUser();
   const [users] = useState(mockUsers);
   const [demoMode, setDemoMode] = useState(false);
-  const [buildingTasks, setBuildingTasks] = useState(initialBuildingTasks);
-  const [kanbanTasks, setKanbanTasks] = useState([...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
-  const [recurringTasks, setRecurringTasks] = useState(initialRecurringTasks);
-  const [comments, setComments] = useState(initialComments);
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const [options, setOptions] = useState(initialOptions);
-  const [workforce, setWorkforce] = useState(initialWorkforce);
+  
+  // Load saved data from localStorage on mount
+  const [savedData] = useState(() => loadFromStorage());
+  
+  const [buildingTasks, setBuildingTasks] = useState(() => savedData?.buildingTasks || initialBuildingTasks);
+  const [kanbanTasks, setKanbanTasks] = useState(() => savedData?.kanbanTasks || [...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
+  const [recurringTasks, setRecurringTasks] = useState(() => savedData?.recurringTasks || initialRecurringTasks);
+  const [comments, setComments] = useState(() => savedData?.comments || initialComments);
+  const [notifications, setNotifications] = useState(() => savedData?.notifications || initialNotifications);
+  const [options, setOptions] = useState(() => savedData?.options || initialOptions);
+  const [workforce, setWorkforce] = useState(() => savedData?.workforce || initialWorkforce);
+  const [buildingSequences, setBuildingSequences] = useState(() => savedData?.buildingSequences || {
+    standalone: [
+      { id: 'villa3', label: 'Villa 3', starred: true, archived: false },
+      { id: 'villa2', label: 'Villa 2', starred: false, archived: false },
+      { id: 'villa1', label: 'Villa 1', starred: false, archived: false },
+    ],
+    commons: {
+      label: 'Commons / Infrastructure',
+      zones: [
+        { id: 'main-electricity', label: 'Main Electricity / Internet', starred: false, archived: false },
+        { id: 'gardenbed-upper', label: 'Gardenbed 1 (Upper)', starred: false, archived: false },
+        { id: 'gardenbed-lower', label: 'Gardenbed 2 (Lower)', starred: false, archived: false },
+        { id: 'chicken-coop', label: 'Chicken Coop', starred: false, archived: false },
+        { id: 'landscaping', label: 'Landscaping', starred: false, archived: false },
+      ]
+    }
+  });
+  
   const [workerModal, setWorkerModal] = useState(null);
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [activeNav, setActiveNav] = useState('taskBoard');
@@ -1057,26 +1121,6 @@ export default function Home() {
   const [showArchived, setShowArchived] = useState(false);
   const [pendingChanges, setPendingChanges] = useState([]);
   const [pendingReviewModal, setPendingReviewModal] = useState(null);
-  const [buildingSequences, setBuildingSequences] = useState({
-    standalone: [
-      { id: 'villa3', label: 'Villa 3', starred: true, archived: false },
-      { id: 'villa2', label: 'Villa 2', starred: false, archived: false },
-      { id: 'villa1', label: 'Villa 1', starred: false, archived: false },
-      { id: 'studio3', label: 'Studio 3', starred: false, archived: false },
-    ],
-    commons: {
-      label: 'Commons / Infrastructure',
-      zones: [
-        { id: 'parking', label: 'Parking / Entrance', starred: false, archived: false },
-        { id: 'main-water', label: 'Main Water', starred: false, archived: false },
-        { id: 'main-electricity', label: 'Main Electricity', starred: false, archived: false },
-        { id: 'gardenbed-upper', label: 'Gardenbed 1 (Upper)', starred: false, archived: false },
-        { id: 'gardenbed-lower', label: 'Gardenbed 2 (Lower)', starred: false, archived: false },
-        { id: 'chicken-coop', label: 'Chicken Coop', starred: false, archived: false },
-        { id: 'landscaping', label: 'Landscaping', starred: false, archived: false },
-      ]
-    }
-  });
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
   const [dragOverTaskId, setDragOverTaskId] = useState(null);
@@ -1091,6 +1135,20 @@ export default function Home() {
 
   // Close sidebar on mobile by default
   useEffect(() => { if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false); }, []);
+
+  // Save data to localStorage whenever key state changes
+  useEffect(() => {
+    saveToStorage({
+      buildingTasks,
+      kanbanTasks,
+      recurringTasks,
+      comments,
+      notifications,
+      options,
+      workforce,
+      buildingSequences
+    });
+  }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, buildingSequences]);
 
   if (!isLoaded) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}><div style={{ color: '#fff', fontSize: '18px' }}>Loading...</div></div>;
   if (!isSignedIn && !demoMode) return <LoginScreen onDemoLogin={() => setDemoMode(true)} />;
@@ -1521,7 +1579,10 @@ export default function Home() {
 
   const unreadCount = notifications.filter(n => n.userId === currentUser.id && !n.read).length;
   const activeTask = activeComments ? buildingTasks.find(t => t.id === activeComments) : null;
-  const filteredRecurring = recurringFilter === 'all' ? recurringTasks : recurringTasks.filter(rt => rt.assignedTo === Number(recurringFilter));
+  const [showArchivedRecurring, setShowArchivedRecurring] = useState(false);
+  const filteredRecurring = recurringTasks
+    .filter(rt => showArchivedRecurring || rt.status !== 'archived')
+    .filter(rt => recurringFilter === 'all' || rt.assignedTo === Number(recurringFilter));
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f3f4f6' }}>
@@ -1635,15 +1696,17 @@ export default function Home() {
         {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{selectedTaskUser === 'all' ? 'All Tasks' : users.find(u => u.id === (selectedTaskUser || currentUser.id))?.username + "'s Tasks"}</p></div><select value={selectedTaskUser || currentUser.id} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : Number(e.target.value))} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}>{isManager && <option value="all">All Tasks</option>}{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={handleAddTask} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} currentUserId={currentUser.id} onQuickMove={handleQuickMove} columns={columns} />)}</div></>)}
 
         {/* Recurring Tasks */}
-        {activeNav === 'recurring' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Recurring Tasks</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredRecurring.length} tasks</p></div><select value={recurringFilter} onChange={e => setRecurringFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="all">All People</option>{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={() => setRecurringModal({})} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add</button></div>
-          {['daily', 'weekly', 'monthly', 'specific'].map(freq => { const freqTasks = filteredRecurring.filter(rt => rt.frequency === freq); if (freqTasks.length === 0) return null; return (<div key={freq} style={{ marginBottom: '24px' }}><h3 style={{ fontSize: '14px', fontWeight: '600', color: '#6b7280', marginBottom: '12px', textTransform: 'capitalize' }}>{freq} ({freqTasks.reduce((sum, rt) => sum + (rt.estTime || 0), 0)}h total)</h3><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>{freqTasks.map(rt => { const assignee = users.find(u => u.id === rt.assignedTo); const commentCount = (comments[`r-${rt.id}`] || []).length; return (<div key={rt.id} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '16px', cursor: 'pointer' }} onClick={() => setRecurringModal(rt)}>
+        {activeNav === 'recurring' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Recurring Tasks</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredRecurring.filter(rt => rt.status !== 'archived').length} active, {recurringTasks.filter(rt => rt.status === 'archived').length} archived</p></div><select value={recurringFilter} onChange={e => setRecurringFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="all">All People</option>{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select><label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#6b7280', cursor: 'pointer' }}><input type="checkbox" checked={showArchivedRecurring} onChange={e => setShowArchivedRecurring(e.target.checked)} style={{ cursor: 'pointer' }} />Show archived</label></div><button type="button" onClick={() => setRecurringModal({})} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add</button></div>
+          {['daily', 'weekly', 'monthly', 'specific'].map(freq => { const freqTasks = filteredRecurring.filter(rt => rt.frequency === freq); if (freqTasks.length === 0) return null; return (<div key={freq} style={{ marginBottom: '24px' }}><h3 style={{ fontSize: '14px', fontWeight: '600', color: '#6b7280', marginBottom: '12px', textTransform: 'capitalize' }}>{freq} ({freqTasks.filter(rt => rt.status !== 'paused' && rt.status !== 'archived').reduce((sum, rt) => sum + (rt.estTime || 0), 0)}h active)</h3><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>{freqTasks.map(rt => { const assignee = users.find(u => u.id === rt.assignedTo); const commentCount = (comments[`r-${rt.id}`] || []).length; const isPaused = rt.status === 'paused'; const isArchived = rt.status === 'archived'; return (<div key={rt.id} style={{ background: isArchived ? '#f9fafb' : '#fff', borderRadius: '12px', border: `1px solid ${isPaused ? '#fbbf24' : isArchived ? '#d1d5db' : '#e5e7eb'}`, padding: '16px', cursor: 'pointer', opacity: isArchived ? 0.7 : 1 }} onClick={() => setRecurringModal(rt)}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '11px', padding: '3px 8px', background: '#f3e8ff', color: '#7c3aed', borderRadius: '4px', fontWeight: '600' }}>↻ {freq}</span>
+                {isPaused && <span style={{ fontSize: '10px', padding: '2px 6px', background: '#fef3c7', color: '#d97706', borderRadius: '4px' }}>⏸ Paused</span>}
+                {isArchived && <span style={{ fontSize: '10px', padding: '2px 6px', background: '#f3f4f6', color: '#6b7280', borderRadius: '4px' }}>📦 Archived</span>}
               </div>
               <img src={assignee?.avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
             </div>
-            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>{rt.title}</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: isArchived ? '#9ca3af' : '#1f2937' }}>{rt.title}</div>
             <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
               {freq === 'weekly' && `Every ${rt.days.join(', ')}`}
               {freq === 'monthly' && `Day ${rt.days[0]} of each month`}
@@ -2290,7 +2353,7 @@ export default function Home() {
       {/* Modals & Panels */}
       {taskModal && <TaskModal task={taskModal} onClose={() => setTaskModal(null)} onUpdate={handleTaskUpdate} onDelete={handleTaskDelete} users={users} buildingTasks={buildingTasks} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
       {recurringModal && <RecurringTaskModal task={recurringModal.id ? recurringModal : null} onClose={() => setRecurringModal(null)} onSave={handleRecurringSave} onDelete={handleRecurringDelete} users={users} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
-      {addPhaseModal && <AddPhaseModal isOpen={addPhaseModal} onClose={() => setAddPhaseModal(false)} onAdd={handleAddPhase} villa={currentProject} options={options} setOptions={setOptions} />}
+      {addPhaseModal && <AddPhaseModal isOpen={addPhaseModal} onClose={() => setAddPhaseModal(false)} onAdd={handleAddPhase} villa={currentProject} options={options} />}
       {editPhaseModal && <EditPhaseModal phase={editPhaseModal} onClose={() => setEditPhaseModal(null)} onRename={handleRenamePhase} onDelete={handleDeletePhase} />}
       {workerModal && <WorkerModal worker={workerModal.id ? workerModal : null} onClose={() => setWorkerModal(null)} onSave={(w) => { if (w.id && workforce.find(x => x.id === w.id)) { setWorkforce(prev => prev.map(x => x.id === w.id ? w : x)); } else { setWorkforce(prev => [...prev, w]); } }} onDelete={(id) => setWorkforce(prev => prev.filter(w => w.id !== id))} options={options} setOptions={setOptions} />}
       {addSequenceModal && <AddSequenceModal onClose={() => setAddSequenceModal(false)} onAdd={handleAddSequence} />}
