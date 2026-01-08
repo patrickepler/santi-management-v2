@@ -614,18 +614,18 @@ const AddSequenceModal = ({ onClose, onAdd }) => {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
       <div style={{ width: '100%', maxWidth: '500px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
-        <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600' }}>Add New Building Sequence</h2>
+        <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600' }}>Add New Project</h2>
         
         {/* Name Input */}
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Sequence Name *</label>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Project Name *</label>
           <input 
             value={name} 
             onChange={e => setName(e.target.value)} 
             placeholder="Enter any name (e.g., Villa 4, Pool House, Garage)" 
             style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} 
           />
-          <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>You can enter any name - it doesn't have to match existing sequences</p>
+          <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>You can enter any name - it doesn't have to match existing projects</p>
         </div>
         
         {/* Template Selection (Optional) */}
@@ -649,7 +649,7 @@ const AddSequenceModal = ({ onClose, onAdd }) => {
               </div>
             ))}
           </div>
-          <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px', fontStyle: 'italic' }}>Templates coming soon - for now sequences start empty</p>
+          <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px', fontStyle: 'italic' }}>Templates coming soon - for now projects start empty</p>
         </div>
         
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -660,8 +660,68 @@ const AddSequenceModal = ({ onClose, onAdd }) => {
             disabled={!name.trim()}
             style={{ padding: '10px 20px', background: name.trim() ? '#059669' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', cursor: name.trim() ? 'pointer' : 'not-allowed' }}
           >
-            Add Sequence
+            Add Project
           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============ EDIT PROJECT/ZONE MODAL ============
+const EditProjectModal = ({ item, type, onClose, onSave, onDelete, onArchive, onStar }) => {
+  const [name, setName] = useState(item?.label || '');
+  
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
+      <div style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+        <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600' }}>Edit {type === 'project' ? 'Project' : 'Zone'}</h2>
+        
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Name *</label>
+          <input 
+            value={name} 
+            onChange={e => setName(e.target.value)} 
+            style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} 
+          />
+        </div>
+        
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <button 
+            type="button" 
+            onClick={() => { onStar(item); onClose(); }}
+            style={{ flex: 1, padding: '10px', background: item?.starred ? '#fef3c7' : '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}
+          >
+            <span>{item?.starred ? '★' : '☆'}</span> {item?.starred ? 'Unstar' : 'Star'}
+          </button>
+          <button 
+            type="button" 
+            onClick={() => { onArchive(item); onClose(); }}
+            style={{ flex: 1, padding: '10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}
+          >
+            <span>📦</span> {item?.archived ? 'Unarchive' : 'Archive'}
+          </button>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
+          <button 
+            type="button" 
+            onClick={() => { if (confirm('Delete this ' + type + '? This cannot be undone.')) { onDelete(item); onClose(); } }}
+            style={{ padding: '10px 16px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
+          >
+            Delete
+          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button type="button" onClick={onClose} style={{ padding: '10px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+            <button 
+              type="button" 
+              onClick={() => { if (name.trim()) { onSave({ ...item, label: name.trim() }); onClose(); } }} 
+              disabled={!name.trim()}
+              style={{ padding: '10px 16px', background: name.trim() ? '#059669' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', cursor: name.trim() ? 'pointer' : 'not-allowed', fontSize: '13px' }}
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -839,7 +899,7 @@ export default function Home() {
   const [workerModal, setWorkerModal] = useState(null);
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [activeNav, setActiveNav] = useState('taskBoard');
-  const [expandedNav, setExpandedNav] = useState(['sequence']);
+  const [expandedNav, setExpandedNav] = useState(['buildingSequence']);
   const [selectedTaskUser, setSelectedTaskUser] = useState(null);
   const [recurringFilter, setRecurringFilter] = useState('all');
   const [taskModal, setTaskModal] = useState(null);
@@ -848,25 +908,27 @@ export default function Home() {
   const [addPhaseModal, setAddPhaseModal] = useState(false);
   const [addSequenceModal, setAddSequenceModal] = useState(false);
   const [addZoneModal, setAddZoneModal] = useState(false);
+  const [editProjectModal, setEditProjectModal] = useState(null); // { item, type: 'project'|'zone' }
+  const [showArchived, setShowArchived] = useState(false);
   const [pendingChanges, setPendingChanges] = useState([]);
   const [pendingReviewModal, setPendingReviewModal] = useState(null);
   const [buildingSequences, setBuildingSequences] = useState({
     standalone: [
-      { id: 'villa3', label: 'Villa 3' },
-      { id: 'villa2', label: 'Villa 2' },
-      { id: 'villa1', label: 'Villa 1' },
-      { id: 'studio3', label: 'Studio 3' },
+      { id: 'villa3', label: 'Villa 3', starred: true, archived: false },
+      { id: 'villa2', label: 'Villa 2', starred: false, archived: false },
+      { id: 'villa1', label: 'Villa 1', starred: false, archived: false },
+      { id: 'studio3', label: 'Studio 3', starred: false, archived: false },
     ],
     commons: {
       label: 'Commons / Infrastructure',
       zones: [
-        { id: 'parking', label: 'Parking / Entrance' },
-        { id: 'main-water', label: 'Main Water' },
-        { id: 'main-electricity', label: 'Main Electricity' },
-        { id: 'gardenbed-upper', label: 'Gardenbed 1 (Upper)' },
-        { id: 'gardenbed-lower', label: 'Gardenbed 2 (Lower)' },
-        { id: 'chicken-coop', label: 'Chicken Coop' },
-        { id: 'landscaping', label: 'Landscaping' },
+        { id: 'parking', label: 'Parking / Entrance', starred: false, archived: false },
+        { id: 'main-water', label: 'Main Water', starred: false, archived: false },
+        { id: 'main-electricity', label: 'Main Electricity', starred: false, archived: false },
+        { id: 'gardenbed-upper', label: 'Gardenbed 1 (Upper)', starred: false, archived: false },
+        { id: 'gardenbed-lower', label: 'Gardenbed 2 (Lower)', starred: false, archived: false },
+        { id: 'chicken-coop', label: 'Chicken Coop', starred: false, archived: false },
+        { id: 'landscaping', label: 'Landscaping', starred: false, archived: false },
       ]
     }
   });
@@ -1072,7 +1134,7 @@ export default function Home() {
     if (currentUser.isAdmin) {
       setBuildingSequences(prev => ({
         ...prev,
-        standalone: [...prev.standalone, { id, label }]
+        standalone: [...prev.standalone, { id, label, starred: false, archived: false }]
       }));
     } else {
       proposeChange('add_sequence', { sequenceId: id, sequenceLabel: label });
@@ -1085,14 +1147,86 @@ export default function Home() {
       ...prev,
       commons: {
         ...prev.commons,
-        zones: [...prev.commons.zones, { id, label }]
+        zones: [...prev.commons.zones, { id, label, starred: false, archived: false }]
       }
     }));
     // Navigate to the new zone
     setActiveNav(`zone-${id}`);
   };
+  
+  // Project/Zone management handlers
+  const handleUpdateProject = (updated) => {
+    setBuildingSequences(prev => ({
+      ...prev,
+      standalone: prev.standalone.map(s => s.id === updated.id ? updated : s)
+    }));
+  };
+  
+  const handleDeleteProject = (item) => {
+    setBuildingSequences(prev => ({
+      ...prev,
+      standalone: prev.standalone.filter(s => s.id !== item.id)
+    }));
+    // Navigate away if we deleted the current project
+    if (activeNav === `project-${item.id}`) setActiveNav('taskBoard');
+  };
+  
+  const handleArchiveProject = (item) => {
+    setBuildingSequences(prev => ({
+      ...prev,
+      standalone: prev.standalone.map(s => s.id === item.id ? { ...s, archived: !s.archived } : s)
+    }));
+  };
+  
+  const handleStarProject = (item) => {
+    setBuildingSequences(prev => ({
+      ...prev,
+      standalone: prev.standalone.map(s => s.id === item.id ? { ...s, starred: !s.starred } : s)
+    }));
+  };
+  
+  const handleUpdateZone = (updated) => {
+    setBuildingSequences(prev => ({
+      ...prev,
+      commons: { ...prev.commons, zones: prev.commons.zones.map(z => z.id === updated.id ? updated : z) }
+    }));
+  };
+  
+  const handleDeleteZone = (item) => {
+    setBuildingSequences(prev => ({
+      ...prev,
+      commons: { ...prev.commons, zones: prev.commons.zones.filter(z => z.id !== item.id) }
+    }));
+    if (activeNav === `zone-${item.id}`) setActiveNav('taskBoard');
+  };
+  
+  const handleArchiveZone = (item) => {
+    setBuildingSequences(prev => ({
+      ...prev,
+      commons: { ...prev.commons, zones: prev.commons.zones.map(z => z.id === item.id ? { ...z, archived: !z.archived } : z) }
+    }));
+  };
+  
+  const handleStarZone = (item) => {
+    setBuildingSequences(prev => ({
+      ...prev,
+      commons: { ...prev.commons, zones: prev.commons.zones.map(z => z.id === item.id ? { ...z, starred: !z.starred } : z) }
+    }));
+  };
 
   const pendingCount = pendingChanges.filter(p => p.status === 'pending').length;
+  
+  // Sort and filter projects/zones
+  const sortedProjects = [...buildingSequences.standalone]
+    .filter(s => showArchived || !s.archived)
+    .sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
+  const sortedZones = [...buildingSequences.commons.zones]
+    .filter(z => showArchived || !z.archived)
+    .sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
+  const archivedProjectCount = buildingSequences.standalone.filter(s => s.archived).length;
+  const archivedZoneCount = buildingSequences.commons.zones.filter(z => z.archived).length;
+  const totalArchived = archivedProjectCount + archivedZoneCount;
+  
   // Build nav items from new structure
   const navItems = [
     { id: 'taskBoard', label: 'Task Board', icon: 'kanban' }, 
@@ -1103,24 +1237,32 @@ export default function Home() {
       label: 'Building Sequence', 
       icon: 'list',
       subItems: [
-        // Standalone projects
-        ...buildingSequences.standalone.map(s => ({ 
+        // Standalone projects (sorted: starred first, filtered: hide archived)
+        ...sortedProjects.map(s => ({ 
           id: `project-${s.id}`, 
           label: s.label,
-          type: 'project'
+          type: 'project',
+          starred: s.starred,
+          archived: s.archived,
+          itemData: s
         })),
         // Add Project button (admin only)
         ...(currentUser.isAdmin ? [{ id: 'add-project', label: '+ Add Project', isAddProject: true }] : []),
         // Section header for Commons
         { id: 'commons-header', label: buildingSequences.commons.label, isHeader: true },
-        // Zones under Commons
-        ...buildingSequences.commons.zones.map(z => ({ 
+        // Zones under Commons (sorted: starred first, filtered: hide archived)
+        ...sortedZones.map(z => ({ 
           id: `zone-${z.id}`, 
           label: z.label,
-          type: 'zone'
+          type: 'zone',
+          starred: z.starred,
+          archived: z.archived,
+          itemData: z
         })),
         // Add Zone button (admin only)
-        ...(currentUser.isAdmin ? [{ id: 'add-zone', label: '+ Add Zone', isAddZone: true }] : [])
+        ...(currentUser.isAdmin ? [{ id: 'add-zone', label: '+ Add Zone', isAddZone: true }] : []),
+        // Show/Hide Archived toggle (if there are archived items)
+        ...(totalArchived > 0 ? [{ id: 'toggle-archived', label: showArchived ? 'Hide Archived' : `Show Archived (${totalArchived})`, isToggleArchived: true }] : [])
       ]
     },
     // Pending Approvals for admin (always visible)
@@ -1226,15 +1368,39 @@ export default function Home() {
                     <button key={sub.id} type="button" onClick={() => setAddZoneModal(true)} style={{ width: '100%', padding: '6px 12px 6px 24px', background: 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#059669', fontSize: '12px', textAlign: 'left', marginBottom: '2px', fontWeight: '600' }}>{sub.label}</button>
                   );
                 }
-                // Zone item (indented more)
-                if (sub.type === 'zone') {
+                // Toggle archived button
+                if (sub.isToggleArchived) {
                   return (
-                    <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '6px 12px 6px 24px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px' }}>{sub.label}</button>
+                    <button key={sub.id} type="button" onClick={() => setShowArchived(!showArchived)} style={{ width: '100%', padding: '6px 12px', background: 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#9ca3af', fontSize: '11px', textAlign: 'left', marginBottom: '2px', marginTop: '8px' }}>{sub.label}</button>
                   );
                 }
-                // Regular project item
+                // Zone item (indented more) - with star and edit
+                if (sub.type === 'zone') {
+                  return (
+                    <div key={sub.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '2px', position: 'relative' }} className="nav-item-hover">
+                      <button type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ flex: 1, padding: '6px 12px 6px 24px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: sub.archived ? '#d1d5db' : (activeNav === sub.id ? '#059669' : '#6b7280'), fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px', fontStyle: sub.archived ? 'italic' : 'normal' }}>
+                        {sub.starred && <span style={{ color: '#f59e0b', fontSize: '11px' }}>★</span>}
+                        {sub.label}
+                        {sub.archived && <span style={{ fontSize: '10px', color: '#9ca3af' }}>(archived)</span>}
+                      </button>
+                      {currentUser.isAdmin && (
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setEditProjectModal({ item: sub.itemData, type: 'zone' }); }} style={{ padding: '4px 6px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '14px', opacity: 0.5 }} onMouseEnter={e => e.target.style.opacity = 1} onMouseLeave={e => e.target.style.opacity = 0.5}>⋮</button>
+                      )}
+                    </div>
+                  );
+                }
+                // Regular project item - with star and edit
                 return (
-                  <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '6px 12px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px', fontWeight: activeNav === sub.id ? '600' : '400' }}>{sub.label}</button>
+                  <div key={sub.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '2px', position: 'relative' }} className="nav-item-hover">
+                    <button type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ flex: 1, padding: '6px 12px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: sub.archived ? '#d1d5db' : (activeNav === sub.id ? '#059669' : '#6b7280'), fontSize: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: activeNav === sub.id ? '600' : '400', fontStyle: sub.archived ? 'italic' : 'normal' }}>
+                      {sub.starred && <span style={{ color: '#f59e0b', fontSize: '11px' }}>★</span>}
+                      {sub.label}
+                      {sub.archived && <span style={{ fontSize: '10px', color: '#9ca3af' }}>(archived)</span>}
+                    </button>
+                    {currentUser.isAdmin && (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setEditProjectModal({ item: sub.itemData, type: 'project' }); }} style={{ padding: '4px 6px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '14px', opacity: 0.5 }} onMouseEnter={e => e.target.style.opacity = 1} onMouseLeave={e => e.target.style.opacity = 0.5}>⋮</button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -1908,6 +2074,15 @@ export default function Home() {
       {workerModal && <WorkerModal worker={workerModal.id ? workerModal : null} onClose={() => setWorkerModal(null)} onSave={(w) => { if (w.id && workforce.find(x => x.id === w.id)) { setWorkforce(prev => prev.map(x => x.id === w.id ? w : x)); } else { setWorkforce(prev => [...prev, w]); } }} onDelete={(id) => setWorkforce(prev => prev.filter(w => w.id !== id))} options={options} setOptions={setOptions} />}
       {addSequenceModal && <AddSequenceModal onClose={() => setAddSequenceModal(false)} onAdd={handleAddSequence} />}
       {addZoneModal && <AddZoneModal onClose={() => setAddZoneModal(false)} onAdd={handleAddZone} />}
+      {editProjectModal && <EditProjectModal 
+        item={editProjectModal.item} 
+        type={editProjectModal.type} 
+        onClose={() => setEditProjectModal(null)} 
+        onSave={editProjectModal.type === 'project' ? handleUpdateProject : handleUpdateZone}
+        onDelete={editProjectModal.type === 'project' ? handleDeleteProject : handleDeleteZone}
+        onArchive={editProjectModal.type === 'project' ? handleArchiveProject : handleArchiveZone}
+        onStar={editProjectModal.type === 'project' ? handleStarProject : handleStarZone}
+      />}
       {pendingReviewModal && <PendingReviewModal change={pendingReviewModal} onClose={() => setPendingReviewModal(null)} onApprove={approveChange} onReject={rejectChange} onComment={addChangeComment} users={users} buildingTasks={buildingTasks} />}
       {activeComments && <CommentsPanel taskId={activeComments} task={activeTask} comments={comments} setComments={setComments} currentUser={currentUser} users={users} onClose={() => setActiveComments(null)} setNotifications={setNotifications} />}
       {showNotifications && <NotificationsPanel notifications={notifications.filter(n => n.userId === currentUser.id)} setNotifications={setNotifications} users={users} onClose={() => setShowNotifications(false)} onGoToTask={(id) => { setActiveComments(id); setShowNotifications(false); }} />}
