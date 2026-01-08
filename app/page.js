@@ -54,6 +54,57 @@ const initialRecurringTasks = [
   { id: 'r6', title: 'Check supplier status updates', assignedTo: 4, frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
 ];
 
+// Generate recurring task instances for the last 7 days
+const generateRecurringTaskInstances = () => {
+  const today = new Date(TODAY);
+  const checkDays = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    checkDays.push(d.toISOString().split('T')[0]);
+  }
+  
+  const tasks = [];
+  initialRecurringTasks.forEach(rt => {
+    checkDays.forEach(dateStr => {
+      const checkDate = new Date(dateStr);
+      const checkDayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][checkDate.getDay()];
+      const checkDayOfMonth = checkDate.getDate().toString();
+      
+      let shouldCreate = false;
+      
+      if (rt.frequency === 'daily') {
+        shouldCreate = true;
+      } else if (rt.frequency === 'weekly' && rt.days.includes(checkDayOfWeek)) {
+        shouldCreate = true;
+      } else if (rt.frequency === 'monthly' && rt.days.includes(checkDayOfMonth)) {
+        shouldCreate = true;
+      } else if (rt.frequency === 'specific' && rt.specificDates.includes(dateStr)) {
+        shouldCreate = true;
+      }
+      
+      if (shouldCreate) {
+        const taskId = `rec-${rt.id}-${dateStr}`;
+        tasks.push({
+          id: taskId,
+          title: rt.title,
+          assignedTo: rt.assignedTo,
+          column: 'today',
+          dueDate: dateStr,
+          type: 'recurring',
+          recurringTaskId: rt.id,
+          estTime: rt.estTime,
+          actualTime: null,
+          createdAt: dateStr
+        });
+      }
+    });
+  });
+  return tasks;
+};
+
+const generatedRecurringTasks = generateRecurringTaskInstances();
+
 const initialComments = {
   1: [{ id: 1, taskId: 1, userId: 4, text: 'Re-bar delivery confirmed', timestamp: '2026-01-04T09:30:00', mentions: [] }, { id: 2, taskId: 1, userId: 1, text: 'Great, crew ready by 7am', timestamp: '2026-01-04T10:15:00', mentions: [] }],
   5: [{ id: 3, taskId: 5, userId: 2, text: 'Need concrete mix specs', timestamp: '2026-01-03T14:00:00', mentions: [] }],
@@ -984,7 +1035,7 @@ export default function Home() {
   const [users] = useState(mockUsers);
   const [demoMode, setDemoMode] = useState(false);
   const [buildingTasks, setBuildingTasks] = useState(initialBuildingTasks);
-  const [kanbanTasks, setKanbanTasks] = useState([...initialKanbanTasks, ...initialSCTasks]);
+  const [kanbanTasks, setKanbanTasks] = useState([...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
   const [recurringTasks, setRecurringTasks] = useState(initialRecurringTasks);
   const [comments, setComments] = useState(initialComments);
   const [notifications, setNotifications] = useState(initialNotifications);
