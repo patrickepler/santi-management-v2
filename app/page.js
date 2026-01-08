@@ -665,6 +665,42 @@ const AddSequenceModal = ({ onClose, onAdd }) => {
   );
 };
 
+// ============ ADD ZONE MODAL ============
+const AddZoneModal = ({ onClose, onAdd }) => {
+  const [name, setName] = useState('');
+  
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
+      <div style={{ width: '100%', maxWidth: '450px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+        <h2 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '600' }}>Add Zone to Commons / Infrastructure</h2>
+        <p style={{ margin: '0 0 20px', fontSize: '12px', color: '#6b7280' }}>Zones are sub-areas like Parking, Main Water, Gardens, etc.</p>
+        
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Zone Name *</label>
+          <input 
+            value={name} 
+            onChange={e => setName(e.target.value)} 
+            placeholder="e.g., Swimming Pool, Garden Shed, Staff Quarters" 
+            style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} 
+          />
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
+          <button 
+            type="button" 
+            onClick={() => { if (name.trim()) { onAdd(name.trim()); onClose(); } }} 
+            disabled={!name.trim()}
+            style={{ padding: '10px 20px', background: name.trim() ? '#059669' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', cursor: name.trim() ? 'pointer' : 'not-allowed' }}
+          >
+            Add Zone
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ============ PENDING REVIEW MODAL ============
 const PendingReviewModal = ({ change, onClose, onApprove, onReject, onComment, users, buildingTasks }) => {
   const [commentText, setCommentText] = useState('');
@@ -808,14 +844,29 @@ export default function Home() {
   const [addStepModal, setAddStepModal] = useState(null);
   const [addPhaseModal, setAddPhaseModal] = useState(false);
   const [addSequenceModal, setAddSequenceModal] = useState(false);
+  const [addZoneModal, setAddZoneModal] = useState(false);
   const [pendingChanges, setPendingChanges] = useState([]);
   const [pendingReviewModal, setPendingReviewModal] = useState(null);
-  const [buildingSequences, setBuildingSequences] = useState([
-    { id: 'villa3', label: 'Villa 3' },
-    { id: 'villa2', label: 'Villa 2' },
-    { id: 'villa1', label: 'Villa 1' },
-    { id: 'landscaping', label: 'Landscaping' },
-  ]);
+  const [buildingSequences, setBuildingSequences] = useState({
+    standalone: [
+      { id: 'villa3', label: 'Villa 3' },
+      { id: 'villa2', label: 'Villa 2' },
+      { id: 'villa1', label: 'Villa 1' },
+      { id: 'studio3', label: 'Studio 3' },
+    ],
+    commons: {
+      label: 'Commons / Infrastructure',
+      zones: [
+        { id: 'parking', label: 'Parking / Entrance' },
+        { id: 'main-water', label: 'Main Water' },
+        { id: 'main-electricity', label: 'Main Electricity' },
+        { id: 'gardenbed-upper', label: 'Gardenbed 1 (Upper)' },
+        { id: 'gardenbed-lower', label: 'Gardenbed 2 (Lower)' },
+        { id: 'chicken-coop', label: 'Chicken Coop' },
+        { id: 'landscaping', label: 'Landscaping' },
+      ]
+    }
+  });
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
   const [dragOverTaskId, setDragOverTaskId] = useState(null);
@@ -1016,17 +1067,50 @@ export default function Home() {
   const handleAddSequence = (label) => {
     const id = label.toLowerCase().replace(/\s+/g, '-');
     if (currentUser.isAdmin) {
-      setBuildingSequences(prev => [...prev, { id, label }]);
+      setBuildingSequences(prev => ({
+        ...prev,
+        standalone: [...prev.standalone, { id, label }]
+      }));
     } else {
       proposeChange('add_sequence', { sequenceId: id, sequenceLabel: label });
     }
   };
+  
+  const handleAddZone = (label) => {
+    const id = label.toLowerCase().replace(/\s+/g, '-');
+    setBuildingSequences(prev => ({
+      ...prev,
+      commons: {
+        ...prev.commons,
+        zones: [...prev.commons.zones, { id, label }]
+      }
+    }));
+    // Navigate to the new zone
+    setActiveNav(`zone-${id}`);
+  };
 
   const pendingCount = pendingChanges.filter(p => p.status === 'pending').length;
+  // Build nav items from new structure
   const navItems = [
     { id: 'taskBoard', label: 'Task Board', icon: 'kanban' }, 
-    { id: 'recurring', label: 'Recurring Tasks', icon: 'repeat' }, 
-    { id: 'sequence', label: 'Building Sequence', icon: 'list', subItems: buildingSequences.map(s => ({ id: `sequence-${s.id}`, label: s.label }))}, 
+    { id: 'recurring', label: 'Recurring Tasks', icon: 'repeat' },
+    // Standalone building sequences (Villa 1, Villa 2, etc.)
+    ...buildingSequences.standalone.map(s => ({ 
+      id: `project-${s.id}`, 
+      label: s.label, 
+      icon: 'home',
+      isProject: true 
+    })),
+    // Commons / Infrastructure with zones
+    { 
+      id: 'commons', 
+      label: buildingSequences.commons.label, 
+      icon: 'list',
+      subItems: [
+        ...buildingSequences.commons.zones.map(z => ({ id: `zone-${z.id}`, label: z.label })),
+        { id: 'add-zone', label: '+ Add Zone', isAdd: true }
+      ]
+    },
     ...(currentUser.isAdmin && pendingCount > 0 ? [{ id: 'pendingApprovals', label: `Pending Approvals (${pendingCount})`, icon: 'check' }] : []),
     { id: 'schedule', label: 'Daily Worker Schedule', icon: 'calendar' }, 
     { id: 'workers', label: 'Workforce', icon: 'users' }, 
@@ -1034,8 +1118,26 @@ export default function Home() {
     { id: 'reports', label: 'Reports', icon: 'chart' }
   ];
 
-  const currentVilla = activeNav === 'sequence-villa3' ? 'Villa 3' : activeNav === 'sequence-villa2' ? 'Villa 2' : activeNav === 'sequence-villa1' ? 'Villa 1' : activeNav === 'sequence-landscaping' ? 'Landscaping' : null;
-  const filteredBuildingTasks = currentVilla ? buildingTasks.filter(t => t.villa === currentVilla).filter(t => !search || t.step.toLowerCase().includes(search.toLowerCase()) || t.task.toLowerCase().includes(search.toLowerCase())) : [];
+  // Get current project/zone name for filtering
+  const getCurrentProject = () => {
+    // Standalone projects
+    if (activeNav.startsWith('project-')) {
+      const projectId = activeNav.replace('project-', '');
+      const project = buildingSequences.standalone.find(s => s.id === projectId);
+      return project?.label || null;
+    }
+    // Zone projects under Commons
+    if (activeNav.startsWith('zone-')) {
+      const zoneId = activeNav.replace('zone-', '');
+      const zone = buildingSequences.commons.zones.find(z => z.id === zoneId);
+      return zone?.label || null;
+    }
+    return null;
+  };
+  
+  const currentProject = getCurrentProject();
+  const currentVilla = currentProject; // Keep for backward compatibility with buildingTasks.villa field
+  const filteredBuildingTasks = currentProject ? buildingTasks.filter(t => t.villa === currentProject).filter(t => !search || t.step.toLowerCase().includes(search.toLowerCase()) || t.task.toLowerCase().includes(search.toLowerCase())) : [];
   const grouped = filteredBuildingTasks.reduce((acc, t) => { (acc[t.subCategory] = acc[t.subCategory] || []).push(t); return acc; }, {});
   Object.keys(grouped).forEach(k => grouped[k].sort((a, b) => a.order - b.order));
 
@@ -1061,9 +1163,41 @@ export default function Home() {
           <button type="button" onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}><Icon name="x" size={20} /></button>
         </div>
         <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#f9fafb', borderRadius: '10px' }}><img src={currentUser.avatar} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: '13px', fontWeight: '600' }}>{currentUser.username}</div><div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'capitalize' }}>{currentUser.role}</div></div><button type="button" onClick={() => setShowNotifications(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', position: 'relative', padding: '4px' }}><Icon name="bell" size={18} />{unreadCount > 0 && <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '16px', height: '16px', background: '#dc2626', color: '#fff', borderRadius: '50%', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>{unreadCount}</span>}</button>{demoMode ? <button type="button" onClick={() => setDemoMode(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button> : <SignOutButton><button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button></SignOutButton>}</div></div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>{navItems.map(item => (<div key={item.id}><button type="button" onClick={() => { if (item.subItems) { setExpandedNav(p => p.includes(item.id) ? p.filter(x => x !== item.id) : [...p, item.id]); if (item.id === 'sequence') { setActiveNav('sequenceOverview'); } } else { setActiveNav(item.id); if (window.innerWidth < 768) setSidebarOpen(false); } }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: activeNav === item.id || (item.id === 'sequence' && activeNav === 'sequenceOverview') ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', color: activeNav === item.id || (item.id === 'sequence' && activeNav === 'sequenceOverview') ? '#059669' : '#4b5563', marginBottom: '4px' }}><Icon name={item.icon} size={18} /><span style={{ flex: 1, textAlign: 'left', fontSize: '14px', fontWeight: '500' }}>{item.label}</span>{item.subItems && <Icon name={expandedNav.includes(item.id) ? 'chevronDown' : 'chevronRight'} size={16} />}</button>{item.subItems && expandedNav.includes(item.id) && <div style={{ marginLeft: '28px', marginBottom: '8px' }}>{item.subItems.map(sub => (
-          <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '8px 12px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px' }}>{sub.label}</button>
-        ))}</div>}</div>))}</div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>{navItems.map(item => (<div key={item.id}>
+          <button type="button" onClick={() => { 
+            if (item.subItems) { 
+              setExpandedNav(p => p.includes(item.id) ? p.filter(x => x !== item.id) : [...p, item.id]); 
+            } else { 
+              setActiveNav(item.id); 
+              if (window.innerWidth < 768) setSidebarOpen(false); 
+            } 
+          }} style={{ 
+            width: '100%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px', 
+            padding: '10px 12px', 
+            background: activeNav === item.id || (item.isProject && activeNav === item.id) ? '#ecfdf5' : 'transparent', 
+            border: 'none', 
+            borderRadius: '8px', 
+            cursor: 'pointer', 
+            color: activeNav === item.id || (item.isProject && activeNav === item.id) ? '#059669' : '#4b5563', 
+            marginBottom: '4px' 
+          }}>
+            <Icon name={item.icon} size={18} />
+            <span style={{ flex: 1, textAlign: 'left', fontSize: '14px', fontWeight: '500' }}>{item.label}</span>
+            {item.subItems && <Icon name={expandedNav.includes(item.id) ? 'chevronDown' : 'chevronRight'} size={16} />}
+          </button>
+          {item.subItems && expandedNav.includes(item.id) && (
+            <div style={{ marginLeft: '28px', marginBottom: '8px' }}>
+              {item.subItems.map(sub => sub.isAdd ? (
+                <button key={sub.id} type="button" onClick={() => setAddZoneModal(true)} style={{ width: '100%', padding: '8px 12px', background: '#f0fdf4', border: '1px dashed #86efac', borderRadius: '6px', cursor: 'pointer', color: '#059669', fontSize: '12px', textAlign: 'left', marginTop: '8px', fontWeight: '600' }}>{sub.label}</button>
+              ) : (
+                <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '8px 12px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px' }}>{sub.label}</button>
+              ))}
+            </div>
+          )}
+        </div>))}</div>
       </aside>
 
       {/* Main Content */}
@@ -1096,88 +1230,16 @@ export default function Home() {
         </>)}
 
         {/* Building Sequences Overview */}
-        {activeNav === 'sequenceOverview' && (<>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}>
-            <div>
-              <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Building Sequences</h1>
-              <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{buildingSequences.length} sequences</p>
+        {/* Project View (Standalone or Zone) */}
+        {(activeNav.startsWith('project-') || activeNav.startsWith('zone-')) && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>{currentProject}</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{activeNav.startsWith('zone-') && <span style={{ marginRight: '8px', padding: '2px 8px', background: '#f3f4f6', borderRadius: '4px', fontSize: '11px' }}>Commons / Infrastructure</span>}{filteredBuildingTasks.length} steps {!currentUser.isAdmin && <span style={{ fontSize: '12px', color: '#f59e0b' }}>(Your edits require approval)</span>}</p></div><div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}><input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: '160px', padding: '10px 16px', border: '1px solid #e5e7eb', borderRadius: '10px' }} /><button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add Phase</button></div></div>
+          {filteredBuildingTasks.length === 0 && Object.keys(grouped).length === 0 && (
+            <div style={{ background: '#fff', borderRadius: '12px', border: '2px dashed #e5e7eb', padding: '48px', textAlign: 'center' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏗️</div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px' }}>No phases yet</h3>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 20px' }}>Start by adding a phase to organize your work</p>
+              <button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add First Phase</button>
             </div>
-            <button type="button" onClick={() => setAddSequenceModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Sequence</button>
-          </div>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-            {buildingSequences.map(seq => {
-              const seqTasks = buildingTasks.filter(t => t.villa === seq.label);
-              const doneCount = seqTasks.filter(t => t.status === 'Done').length;
-              const inProgressCount = seqTasks.filter(t => t.status === 'In Progress').length;
-              const scPendingCount = seqTasks.filter(t => t.status.includes('Supply Chain')).length;
-              const progress = seqTasks.length > 0 ? Math.round((doneCount / seqTasks.length) * 100) : 0;
-              
-              return (
-                <div key={seq.id} onClick={() => setActiveNav(`sequence-${seq.id}`)} style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e5e7eb', padding: '24px', cursor: 'pointer', transition: 'box-shadow 0.2s' }} onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'} onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>{seq.label}</h3>
-                    <span style={{ fontSize: '24px' }}>{seq.label.includes('Villa') ? '🏠' : seq.label.includes('Landscaping') ? '🌿' : '🏗️'}</span>
-                  </div>
-                  
-                  {/* Progress bar */}
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '12px', color: '#6b7280' }}>Progress</span>
-                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#059669' }}>{progress}%</span>
-                    </div>
-                    <div style={{ height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #059669, #10b981)', borderRadius: '4px', transition: 'width 0.3s' }} />
-                    </div>
-                  </div>
-                  
-                  {/* Stats */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ textAlign: 'center', padding: '8px', background: '#f0fdf4', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '18px', fontWeight: '700', color: '#059669' }}>{doneCount}</div>
-                      <div style={{ fontSize: '10px', color: '#6b7280' }}>Done</div>
-                    </div>
-                    <div style={{ textAlign: 'center', padding: '8px', background: '#faf5ff', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '18px', fontWeight: '700', color: '#7c3aed' }}>{inProgressCount}</div>
-                      <div style={{ fontSize: '10px', color: '#6b7280' }}>Active</div>
-                    </div>
-                    <div style={{ textAlign: 'center', padding: '8px', background: '#fefce8', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '18px', fontWeight: '700', color: '#d97706' }}>{scPendingCount}</div>
-                      <div style={{ fontSize: '10px', color: '#6b7280' }}>SC</div>
-                    </div>
-                  </div>
-                  
-                  <div style={{ fontSize: '12px', color: '#6b7280' }}>{seqTasks.length} total steps</div>
-                </div>
-              );
-            })}
-            
-            {/* Add New Card */}
-            <div onClick={() => setAddSequenceModal(true)} style={{ background: '#f9fafb', borderRadius: '16px', border: '2px dashed #d1d5db', padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', transition: 'border-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.borderColor = '#059669'} onMouseLeave={e => e.currentTarget.style.borderColor = '#d1d5db'}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                <Icon name="plus" size={24} color="#059669" />
-              </div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#059669', marginBottom: '4px' }}>Add New Sequence</div>
-              <div style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>Start from scratch or use a template</div>
-            </div>
-          </div>
-          
-          {/* Templates Section */}
-          <div style={{ marginTop: '32px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#6b7280' }}>Templates (Coming Soon)</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
-              {['Standard Villa', 'Pool House', 'Guest House', 'Landscaping'].map(template => (
-                <div key={template} style={{ background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '16px', opacity: 0.6 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>{template}</div>
-                  <div style={{ fontSize: '11px', color: '#9ca3af' }}>Template</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>)}
-
-        {/* Building Sequence */}
-        {activeNav.startsWith('sequence-') && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>{currentVilla}</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredBuildingTasks.length} steps {!currentUser.isAdmin && <span style={{ fontSize: '12px', color: '#f59e0b' }}>(Your edits require approval)</span>}</p></div><div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}><input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: '160px', padding: '10px 16px', border: '1px solid #e5e7eb', borderRadius: '10px' }} /><button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add Phase</button></div></div>
+          )}
           {Object.entries(grouped).map(([subCat, catTasks]) => (<div key={subCat} style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>{subCat}</h3><span style={{ fontSize: '12px', color: '#6b7280' }}>{catTasks.length} steps</span></div><button type="button" onClick={() => setAddStepModal(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: '#fafafa' }}>{['', 'Readiness', 'Status', 'Steps', 'Task', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; return (<tr key={t.id} draggable onDragStart={(e) => handleRowDragStart(e, t, subCat)} onDragOver={(e) => handleRowDragOver(e, t)} onDrop={(e) => handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '30px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div></td><td style={{ padding: '8px' }}>{r.type !== 'sequenced' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div></td><td style={{ padding: '8px' }}><EditableCell value={t.step} onChange={v => editBuildingTask(t.id, 'step', v)} placeholder="Step name" /></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={options.task[subCat] || []} onChange={v => editBuildingTask(t.id, 'task', v)} placeholder="Select task..." /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => editBuildingTask(t.id, 'notes', v)} placeholder="Notes" /></td><td style={{ padding: '8px' }}><input type="date" value={t.earliestStart || ''} onChange={e => editBuildingTask(t.id, 'earliestStart', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => editBuildingTask(t.id, 'expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.duration} onChange={v => editBuildingTask(t.id, 'duration', v)} placeholder="0:00" /></td><td style={{ padding: '8px' }}><MultiSelect values={t.skilledWorkers} options={options.skilledWorker} onChange={v => editBuildingTask(t.id, 'skilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><MultiSelect values={t.unskilledWorkers} options={options.unskilledWorker} onChange={v => editBuildingTask(t.id, 'unskilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button></td><td style={{ padding: '8px' }}><button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button></td></tr>); })}</tbody></table></div></div>))}
         </>)}
 
@@ -1686,9 +1748,10 @@ export default function Home() {
       {taskModal && <TaskModal task={taskModal} onClose={() => setTaskModal(null)} onUpdate={handleTaskUpdate} onDelete={handleTaskDelete} users={users} buildingTasks={buildingTasks} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
       {recurringModal && <RecurringTaskModal task={recurringModal.id ? recurringModal : null} onClose={() => setRecurringModal(null)} onSave={handleRecurringSave} onDelete={handleRecurringDelete} users={users} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
       {addStepModal && <AddStepModal isOpen={!!addStepModal} onClose={() => setAddStepModal(null)} onAdd={(data) => handleAddStep(addStepModal, data)} subCategory={addStepModal} options={options} setOptions={setOptions} />}
-      {addPhaseModal && <AddPhaseModal isOpen={addPhaseModal} onClose={() => setAddPhaseModal(false)} onAdd={handleAddPhase} villa={currentVilla} options={options} setOptions={setOptions} />}
+      {addPhaseModal && <AddPhaseModal isOpen={addPhaseModal} onClose={() => setAddPhaseModal(false)} onAdd={handleAddPhase} villa={currentProject} options={options} setOptions={setOptions} />}
       {workerModal && <WorkerModal worker={workerModal.id ? workerModal : null} onClose={() => setWorkerModal(null)} onSave={(w) => { if (w.id && workforce.find(x => x.id === w.id)) { setWorkforce(prev => prev.map(x => x.id === w.id ? w : x)); } else { setWorkforce(prev => [...prev, w]); } }} onDelete={(id) => setWorkforce(prev => prev.filter(w => w.id !== id))} options={options} setOptions={setOptions} />}
       {addSequenceModal && <AddSequenceModal onClose={() => setAddSequenceModal(false)} onAdd={handleAddSequence} />}
+      {addZoneModal && <AddZoneModal onClose={() => setAddZoneModal(false)} onAdd={handleAddZone} />}
       {pendingReviewModal && <PendingReviewModal change={pendingReviewModal} onClose={() => setPendingReviewModal(null)} onApprove={approveChange} onReject={rejectChange} onComment={addChangeComment} users={users} buildingTasks={buildingTasks} />}
       {activeComments && <CommentsPanel taskId={activeComments} task={activeTask} comments={comments} setComments={setComments} currentUser={currentUser} users={users} onClose={() => setActiveComments(null)} setNotifications={setNotifications} />}
       {showNotifications && <NotificationsPanel notifications={notifications.filter(n => n.userId === currentUser.id)} setNotifications={setNotifications} users={users} onClose={() => setShowNotifications(false)} onGoToTask={(id) => { setActiveComments(id); setShowNotifications(false); }} />}
