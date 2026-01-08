@@ -159,6 +159,9 @@ const Icon = ({ name, size = 20 }) => {
     trash: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>,
     link: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>,
     menu: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+    home: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+    check: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
+    edit: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
   };
   return icons[name] || null;
 };
@@ -1094,24 +1097,36 @@ export default function Home() {
   const navItems = [
     { id: 'taskBoard', label: 'Task Board', icon: 'kanban' }, 
     { id: 'recurring', label: 'Recurring Tasks', icon: 'repeat' },
-    // Standalone building sequences (Villa 1, Villa 2, etc.)
-    ...buildingSequences.standalone.map(s => ({ 
-      id: `project-${s.id}`, 
-      label: s.label, 
-      icon: 'home',
-      isProject: true 
-    })),
-    // Commons / Infrastructure with zones
+    // Building Sequence - parent that contains everything
     { 
-      id: 'commons', 
-      label: buildingSequences.commons.label, 
+      id: 'buildingSequence', 
+      label: 'Building Sequence', 
       icon: 'list',
       subItems: [
-        ...buildingSequences.commons.zones.map(z => ({ id: `zone-${z.id}`, label: z.label })),
-        { id: 'add-zone', label: '+ Add Zone', isAdd: true }
+        // Standalone projects
+        ...buildingSequences.standalone.map(s => ({ 
+          id: `project-${s.id}`, 
+          label: s.label,
+          type: 'project'
+        })),
+        // Add Project button (admin only)
+        ...(currentUser.isAdmin ? [{ id: 'add-project', label: '+ Add Project', isAddProject: true }] : []),
+        // Section header for Commons
+        { id: 'commons-header', label: buildingSequences.commons.label, isHeader: true },
+        // Zones under Commons
+        ...buildingSequences.commons.zones.map(z => ({ 
+          id: `zone-${z.id}`, 
+          label: z.label,
+          type: 'zone'
+        })),
+        // Add Zone button (admin only)
+        ...(currentUser.isAdmin ? [{ id: 'add-zone', label: '+ Add Zone', isAddZone: true }] : [])
       ]
     },
-    ...(currentUser.isAdmin && pendingCount > 0 ? [{ id: 'pendingApprovals', label: `Pending Approvals (${pendingCount})`, icon: 'check' }] : []),
+    // Pending Approvals for admin (always visible)
+    ...(currentUser.isAdmin ? [{ id: 'pendingApprovals', label: 'Pending Approvals', icon: 'check', badge: pendingCount }] : []),
+    // My Suggestions for non-admin
+    ...(!currentUser.isAdmin ? [{ id: 'mySuggestions', label: 'My Suggestions', icon: 'edit', badge: pendingChanges.filter(p => p.requestedBy === currentUser.id && p.status === 'pending').length }] : []),
     { id: 'schedule', label: 'Daily Worker Schedule', icon: 'calendar' }, 
     { id: 'workers', label: 'Workforce', icon: 'users' }, 
     { id: 'materials', label: 'Materials', icon: 'package' }, 
@@ -1177,24 +1192,51 @@ export default function Home() {
             alignItems: 'center', 
             gap: '12px', 
             padding: '10px 12px', 
-            background: activeNav === item.id || (item.isProject && activeNav === item.id) ? '#ecfdf5' : 'transparent', 
+            background: activeNav === item.id ? '#ecfdf5' : 'transparent', 
             border: 'none', 
             borderRadius: '8px', 
             cursor: 'pointer', 
-            color: activeNav === item.id || (item.isProject && activeNav === item.id) ? '#059669' : '#4b5563', 
+            color: activeNav === item.id ? '#059669' : '#4b5563', 
             marginBottom: '4px' 
           }}>
             <Icon name={item.icon} size={18} />
             <span style={{ flex: 1, textAlign: 'left', fontSize: '14px', fontWeight: '500' }}>{item.label}</span>
+            {item.badge > 0 && <span style={{ minWidth: '20px', height: '20px', background: item.id === 'pendingApprovals' ? '#dc2626' : '#f59e0b', color: '#fff', borderRadius: '10px', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' }}>{item.badge}</span>}
+            {item.badge === 0 && (item.id === 'pendingApprovals' || item.id === 'mySuggestions') && <span style={{ fontSize: '11px', color: '#9ca3af' }}>✓</span>}
             {item.subItems && <Icon name={expandedNav.includes(item.id) ? 'chevronDown' : 'chevronRight'} size={16} />}
           </button>
           {item.subItems && expandedNav.includes(item.id) && (
-            <div style={{ marginLeft: '28px', marginBottom: '8px' }}>
-              {item.subItems.map(sub => sub.isAdd ? (
-                <button key={sub.id} type="button" onClick={() => setAddZoneModal(true)} style={{ width: '100%', padding: '8px 12px', background: '#f0fdf4', border: '1px dashed #86efac', borderRadius: '6px', cursor: 'pointer', color: '#059669', fontSize: '12px', textAlign: 'left', marginTop: '8px', fontWeight: '600' }}>{sub.label}</button>
-              ) : (
-                <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '8px 12px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px' }}>{sub.label}</button>
-              ))}
+            <div style={{ marginLeft: '16px', marginBottom: '8px' }}>
+              {item.subItems.map(sub => {
+                // Section header (Commons / Infrastructure)
+                if (sub.isHeader) {
+                  return (
+                    <div key={sub.id} style={{ padding: '10px 12px 6px', fontSize: '11px', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '8px', borderTop: '1px solid #e5e7eb' }}>{sub.label}</div>
+                  );
+                }
+                // Add Project button
+                if (sub.isAddProject) {
+                  return (
+                    <button key={sub.id} type="button" onClick={() => setAddSequenceModal(true)} style={{ width: '100%', padding: '6px 12px', background: 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#059669', fontSize: '12px', textAlign: 'left', marginBottom: '2px', fontWeight: '600' }}>{sub.label}</button>
+                  );
+                }
+                // Add Zone button
+                if (sub.isAddZone) {
+                  return (
+                    <button key={sub.id} type="button" onClick={() => setAddZoneModal(true)} style={{ width: '100%', padding: '6px 12px 6px 24px', background: 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#059669', fontSize: '12px', textAlign: 'left', marginBottom: '2px', fontWeight: '600' }}>{sub.label}</button>
+                  );
+                }
+                // Zone item (indented more)
+                if (sub.type === 'zone') {
+                  return (
+                    <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '6px 12px 6px 24px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px' }}>{sub.label}</button>
+                  );
+                }
+                // Regular project item
+                return (
+                  <button key={sub.id} type="button" onClick={() => { setActiveNav(sub.id); if (window.innerWidth < 768) setSidebarOpen(false); }} style={{ width: '100%', padding: '6px 12px', background: activeNav === sub.id ? '#ecfdf5' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', color: activeNav === sub.id ? '#059669' : '#6b7280', fontSize: '13px', textAlign: 'left', marginBottom: '2px', fontWeight: activeNav === sub.id ? '600' : '400' }}>{sub.label}</button>
+                );
+              })}
             </div>
           )}
         </div>))}</div>
@@ -1665,54 +1707,70 @@ export default function Home() {
         {activeNav === 'pendingApprovals' && currentUser.isAdmin && (<>
           <div style={{ marginBottom: '24px' }}>
             <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Pending Approvals</h1>
-            <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Review proposed changes to Building Sequence</p>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Review proposed changes from your team</p>
           </div>
           
           {pendingChanges.filter(c => c.status === 'pending').length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '40vh', color: '#9ca3af' }}>
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>✓</div>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#6b7280', margin: 0 }}>All caught up!</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#059669', margin: 0 }}>All caught up!</h3>
               <p style={{ fontSize: '14px', margin: '8px 0 0' }}>No pending changes to review</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: '16px' }}>
-              {pendingChanges.filter(c => c.status === 'pending').map(change => {
-                const requestedByUser = users.find(u => u.id === change.requestedBy);
-                const task = change.taskId ? buildingTasks.find(t => t.id === change.taskId) : null;
-                return (
-                  <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <img src={requestedByUser?.avatar} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: '600' }}>{requestedByUser?.username}</div>
-                          <div style={{ fontSize: '12px', color: '#6b7280' }}>{formatTime(change.timestamp)}</div>
-                        </div>
-                      </div>
-                      <span style={{ fontSize: '11px', padding: '4px 10px', background: '#fef3c7', color: '#d97706', borderRadius: '20px', fontWeight: '600' }}>Pending</span>
-                    </div>
-                    
-                    <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                      {change.type === 'edit' && `Change ${change.field}: "${change.oldValue || '(empty)'}" → "${change.newValue}"`}
-                      {change.type === 'add_step' && `Add new step: "${change.newTask?.step}" to ${change.subCategory}`}
-                      {change.type === 'add_phase' && `Add new phase: ${change.subCategory}`}
-                      {change.type === 'delete' && `Delete step: "${change.step}"`}
-                      {change.type === 'add_sequence' && `Add new building sequence: "${change.sequenceLabel}"`}
-                    </div>
-                    
-                    {change.villa && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>📍 {change.villa} → {change.subCategory}</div>}
-                    
-                    {change.comments?.length > 0 && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>💬 {change.comments.length} comment(s)</div>}
-                    
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button type="button" onClick={() => setPendingReviewModal(change)} style={{ padding: '8px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Review Details</button>
-                      <button type="button" onClick={() => approveChange(change.id)} style={{ padding: '8px 16px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Approve</button>
-                      <button type="button" onClick={() => rejectChange(change.id)} style={{ padding: '8px 16px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>✕ Reject</button>
-                    </div>
+            <>
+              {/* Quick Actions Header */}
+              <div style={{ background: '#fef3c7', borderRadius: '12px', padding: '16px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '24px' }}>⚡</span>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>{pendingChanges.filter(c => c.status === 'pending').length} changes need your review</div>
+                    <div style={{ fontSize: '12px', color: '#b45309' }}>Quick review keeps the team moving</div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={() => { pendingChanges.filter(c => c.status === 'pending').forEach(c => approveChange(c.id)); }} style={{ padding: '8px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Approve All</button>
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {pendingChanges.filter(c => c.status === 'pending').map(change => {
+                  const requestedByUser = users.find(u => u.id === change.requestedBy);
+                  const task = change.taskId ? buildingTasks.find(t => t.id === change.taskId) : null;
+                  return (
+                    <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid #fef3c7', padding: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <img src={requestedByUser?.avatar} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                          <div>
+                            <div style={{ fontSize: '14px', fontWeight: '600' }}>{requestedByUser?.username}</div>
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>{formatTime(change.timestamp)}</div>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '11px', padding: '4px 10px', background: '#fef3c7', color: '#d97706', borderRadius: '20px', fontWeight: '600', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
+                      </div>
+                      
+                      <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>
+                        {change.type === 'edit' && <>Change <span style={{ color: '#059669' }}>{change.field}</span>: <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{change.oldValue || '(empty)'}</span> → <span style={{ color: '#059669' }}>{change.newValue}</span></>}
+                        {change.type === 'add_step' && <>Add new step: <span style={{ color: '#059669' }}>"{change.newTask?.step}"</span> to {change.subCategory}</>}
+                        {change.type === 'add_phase' && <>Add new phase: <span style={{ color: '#059669' }}>{change.subCategory}</span></>}
+                        {change.type === 'delete' && <>Delete step: <span style={{ color: '#dc2626' }}>"{change.step}"</span></>}
+                        {change.type === 'add_sequence' && <>Add new building sequence: <span style={{ color: '#059669' }}>"{change.sequenceLabel}"</span></>}
+                      </div>
+                      
+                      {change.villa && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>📍 {change.villa} → {change.subCategory}</div>}
+                      
+                      {change.comments?.length > 0 && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>💬 {change.comments.length} comment(s)</div>}
+                      
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                        <button type="button" onClick={() => approveChange(change.id)} style={{ flex: 1, padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>✓ Approve</button>
+                        <button type="button" onClick={() => setPendingReviewModal(change)} style={{ padding: '10px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Review</button>
+                        <button type="button" onClick={() => rejectChange(change.id)} style={{ padding: '10px 16px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>✕</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
           
           {/* History of past approvals/rejections */}
@@ -1738,6 +1796,104 @@ export default function Home() {
               </div>
             </div>
           )}
+        </>)}
+
+        {/* My Suggestions - for non-admins to track their proposals */}
+        {activeNav === 'mySuggestions' && !currentUser.isAdmin && (<>
+          <div style={{ marginBottom: '24px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>My Suggestions</h1>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Track your proposed changes awaiting approval</p>
+          </div>
+          
+          {(() => {
+            const myPending = pendingChanges.filter(c => c.requestedBy === currentUser.id && c.status === 'pending');
+            const myHistory = pendingChanges.filter(c => c.requestedBy === currentUser.id && c.status !== 'pending');
+            
+            return (
+              <>
+                {/* Pending Suggestions */}
+                {myPending.length === 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '30vh', color: '#9ca3af' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#6b7280', margin: 0 }}>No pending suggestions</h3>
+                    <p style={{ fontSize: '14px', margin: '8px 0 0', textAlign: 'center' }}>When you edit Building Sequences, your changes will appear here for Patrick to approve</p>
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: '32px' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#f59e0b', marginBottom: '16px' }}>⏳ Awaiting Approval ({myPending.length})</h3>
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                      {myPending.map(change => (
+                        <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid #fef3c7', padding: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                            <div>
+                              <span style={{ fontSize: '11px', padding: '3px 8px', background: '#fef3c7', color: '#d97706', borderRadius: '4px', fontWeight: '600', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>{formatTime(change.timestamp)}</div>
+                          </div>
+                          
+                          <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                            {change.type === 'edit' && `Change ${change.field}: "${change.oldValue || '(empty)'}" → "${change.newValue}"`}
+                            {change.type === 'add_step' && `Add new step: "${change.newTask?.step}"`}
+                            {change.type === 'add_phase' && `Add new phase: ${change.subCategory}`}
+                            {change.type === 'delete' && `Delete step: "${change.step}"`}
+                            {change.type === 'add_sequence' && `Add new building sequence: "${change.sequenceLabel}"`}
+                          </div>
+                          
+                          {change.villa && <div style={{ fontSize: '12px', color: '#6b7280' }}>📍 {change.villa} → {change.subCategory}</div>}
+                          
+                          {change.comments?.length > 0 && (
+                            <div style={{ marginTop: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
+                              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '6px' }}>Comments:</div>
+                              {change.comments.map((c, i) => {
+                                const commenter = users.find(u => u.id === c.userId);
+                                return (
+                                  <div key={i} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                                    <span style={{ fontWeight: '500' }}>{commenter?.username}:</span> {c.text}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* History */}
+                {myHistory.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#6b7280', marginBottom: '16px' }}>History</h3>
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      {myHistory.slice(-10).reverse().map(change => (
+                        <div key={change.id} style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: '500' }}>
+                              {change.type === 'edit' && `Changed ${change.field}`}
+                              {change.type === 'add_step' && `Added step: "${change.newTask?.step}"`}
+                              {change.type === 'add_phase' && `Added phase: ${change.subCategory}`}
+                              {change.type === 'delete' && `Deleted step`}
+                              {change.type === 'add_sequence' && `Added sequence`}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>{change.villa} • {formatTime(change.timestamp)}</div>
+                          </div>
+                          <span style={{ 
+                            fontSize: '11px', 
+                            padding: '4px 10px', 
+                            background: change.status === 'approved' ? '#ecfdf5' : '#fef2f2', 
+                            color: change.status === 'approved' ? '#059669' : '#dc2626', 
+                            borderRadius: '20px', 
+                            fontWeight: '600',
+                            textTransform: 'capitalize'
+                          }}>{change.status === 'approved' ? '✓ Approved' : '✕ Rejected'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </>)}
 
         {/* Placeholder pages */}
