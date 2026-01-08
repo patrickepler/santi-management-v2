@@ -247,7 +247,7 @@ const NotificationsPanel = ({ notifications, setNotifications, users, onClose, o
 );
 
 // ============ KANBAN ============
-const KanbanColumn = ({ id, title, tasks, onDrop, onDragOver, users, onTaskClick, onDragStart, dragOverColumn, dragOverTaskId, setDragOverTaskId, currentUserId }) => {
+const KanbanColumn = ({ id, title, tasks, onDrop, onDragOver, users, onTaskClick, onDragStart, dragOverColumn, dragOverTaskId, setDragOverTaskId, currentUserId, onQuickMove, columns }) => {
   const totalHours = tasks.reduce((sum, t) => sum + (t.estTime || 0), 0);
   return (
   <div onDragOver={(e) => { e.preventDefault(); onDragOver(id); }} onDrop={(e) => { e.preventDefault(); onDrop(id); }} style={{ flex: '0 0 280px', minWidth: '280px', background: dragOverColumn === id ? 'rgba(5,150,105,0.05)' : '#f9fafb', borderRadius: '12px', padding: '12px', border: dragOverColumn === id ? '2px dashed #059669' : '2px solid transparent' }}>
@@ -263,26 +263,61 @@ const KanbanColumn = ({ id, title, tasks, onDrop, onDragOver, users, onTaskClick
         const assignee = users.find(u => u.id === task.assignedTo); 
         const overdue = isOverdue(task.dueDate); 
         const isReviewFromOther = task.column === 'review' && task.assignedTo !== currentUserId;
+        const lastMove = task.statusHistory?.[task.statusHistory.length - 1];
+        const mover = lastMove ? users.find(u => u.id === lastMove.userId) : null;
         return (
-        <div key={task.id} draggable onDragStart={(e) => onDragStart(e, task)} onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverTaskId(task.id); }} onClick={() => onTaskClick(task)} style={{ background: isReviewFromOther ? '#fef3c7' : '#fff', borderRadius: '8px', padding: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', cursor: 'grab', border: dragOverTaskId === task.id ? '2px solid #059669' : isReviewFromOther ? '2px solid #f59e0b' : '1px solid #e5e7eb' }}>
+        <div key={task.id} draggable onDragStart={(e) => onDragStart(e, task)} onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverTaskId(task.id); }} style={{ background: isReviewFromOther ? '#fef3c7' : '#fff', borderRadius: '8px', padding: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', cursor: 'grab', border: dragOverTaskId === task.id ? '2px solid #059669' : isReviewFromOther ? '2px solid #f59e0b' : '1px solid #e5e7eb' }}>
           {isReviewFromOther && <div style={{ fontSize: '10px', fontWeight: '600', color: '#d97706', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>⭐ NEEDS YOUR REVIEW</div>}
-          <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '8px', color: '#1f2937' }}>{task.title}</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-              {task.type === 'sc' && <span style={{ fontSize: '10px', padding: '2px 6px', background: '#dbeafe', color: '#2563eb', borderRadius: '4px', fontWeight: '600' }}>SC</span>}
-              {task.type === 'recurring' && <span style={{ fontSize: '10px', padding: '2px 6px', background: '#f3e8ff', color: '#7c3aed', borderRadius: '4px', fontWeight: '600' }}>↻</span>}
-              {task.estTime && <span style={{ fontSize: '10px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '2px' }}>🕐 {task.estTime}h</span>}
-              {task.dueDate && <span style={{ fontSize: '11px', color: overdue ? '#dc2626' : '#6b7280', fontWeight: overdue ? '600' : '400' }}>📅 {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+            <div onClick={() => onTaskClick(task)} style={{ flex: 1, cursor: 'pointer' }}>
+              <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '8px', color: '#1f2937' }}>{task.title}</div>
             </div>
-            {assignee && <img src={assignee.avatar} alt="" title={assignee.username} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />}
+            {/* Quick action buttons */}
+            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+              {id !== 'done' && (
+                <button 
+                  type="button" 
+                  onClick={() => onQuickMove(task, 'done')} 
+                  title="Mark Done"
+                  style={{ width: '24px', height: '24px', padding: 0, background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669' }}
+                >✓</button>
+              )}
+              <select 
+                value="" 
+                onChange={(e) => { if (e.target.value) onQuickMove(task, e.target.value); }}
+                title="Move to..."
+                style={{ width: '24px', height: '24px', padding: 0, background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', appearance: 'none', textAlign: 'center' }}
+              >
+                <option value="">→</option>
+                {columns.filter(c => c.id !== id).map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+              </select>
+            </div>
           </div>
-          {task.expectedArrival && <div style={{ marginTop: '6px', fontSize: '10px', color: '#0891b2', background: '#ecfeff', padding: '3px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📦 {new Date(task.expectedArrival).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>}
+          <div onClick={() => onTaskClick(task)} style={{ cursor: 'pointer' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                {task.type === 'sc' && <span style={{ fontSize: '10px', padding: '2px 6px', background: '#dbeafe', color: '#2563eb', borderRadius: '4px', fontWeight: '600' }}>SC</span>}
+                {task.type === 'recurring' && <span style={{ fontSize: '10px', padding: '2px 6px', background: '#f3e8ff', color: '#7c3aed', borderRadius: '4px', fontWeight: '600' }}>↻</span>}
+                {task.estTime && <span style={{ fontSize: '10px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '2px' }}>🕐 {task.estTime}h</span>}
+                {task.dueDate && <span style={{ fontSize: '11px', color: overdue ? '#dc2626' : '#6b7280', fontWeight: overdue ? '600' : '400' }}>📅 {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+              </div>
+              {assignee && <img src={assignee.avatar} alt="" title={assignee.username} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />}
+            </div>
+            {task.expectedArrival && <div style={{ marginTop: '6px', fontSize: '10px', color: '#0891b2', background: '#ecfeff', padding: '3px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📦 {new Date(task.expectedArrival).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>}
+            {/* Status history - show last move */}
+            {lastMove && mover && (
+              <div style={{ marginTop: '6px', fontSize: '10px', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>Moved by {mover.username}</span>
+                <span>•</span>
+                <span>{formatTime(lastMove.timestamp)}</span>
+              </div>
+            )}
+          </div>
         </div>
       ); })}
     </div>
   </div>
-);
-};
+);};
 const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, comments, setComments, currentUser, setNotifications }) => {
   const [form, setForm] = useState({ ...task });
   const [commentText, setCommentText] = useState('');
@@ -318,6 +353,28 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
         </div>
         <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Expected Arrival (for waiting items)</label><input type="date" value={form.expectedArrival || ''} onChange={e => setForm({ ...form, expectedArrival: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
         {isSC && <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>SC Status</label><div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>{scStatuses.map(s => <button key={s} type="button" onClick={() => setForm({ ...form, scStatus: s })} style={{ padding: '6px 12px', fontSize: '12px', border: form.scStatus === s ? '2px solid #059669' : '1px solid #e5e7eb', borderRadius: '6px', background: form.scStatus === s ? '#ecfdf5' : '#fff', color: form.scStatus === s ? '#059669' : '#6b7280', cursor: 'pointer' }}>{scLabels[s]}</button>)}</div></div>}
+        
+        {/* Status History Section */}
+        {task?.statusHistory && task.statusHistory.length > 0 && (
+          <div style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#6b7280' }}>Status History</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {task.statusHistory.slice().reverse().map((h, i) => {
+                const mover = users.find(u => u.id === h.userId);
+                const colNames = { today: 'Today', thisWeek: 'This Week', waiting: 'Waiting', review: 'To Be Reviewed', later: 'Later', done: 'Done' };
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                    <img src={mover?.avatar} alt="" style={{ width: '20px', height: '20px', borderRadius: '50%' }} />
+                    <span style={{ color: '#374151' }}>
+                      <strong>{mover?.username}</strong> moved from <span style={{ color: '#6b7280' }}>{colNames[h.from] || h.from}</span> → <span style={{ color: '#059669', fontWeight: '500' }}>{colNames[h.to] || h.to}</span>
+                    </span>
+                    <span style={{ color: '#9ca3af', marginLeft: 'auto' }}>{formatTime(h.timestamp)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         
         {/* Comments Section */}
         <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginTop: '16px' }}>
@@ -540,6 +597,50 @@ const AddPhaseModal = ({ isOpen, onClose, onAdd, villa, options, setOptions }) =
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
           <button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
           <button type="button" onClick={() => { if (mainCat && subCat) { onAdd({ mainCat, subCat }); onClose(); setMainCat(''); setSubCat(''); } }} disabled={!mainCat || !subCat} style={{ padding: '10px 20px', background: mainCat && subCat ? '#059669' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', cursor: mainCat && subCat ? 'pointer' : 'not-allowed' }}>Add Phase</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============ EDIT PHASE MODAL ============
+const EditPhaseModal = ({ phase, onClose, onRename, onDelete }) => {
+  const [name, setName] = useState(phase?.subCat || '');
+  
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
+      <div style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+        <h2 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '600' }}>Edit Phase</h2>
+        <p style={{ margin: '0 0 20px', fontSize: '12px', color: '#6b7280' }}>Renaming will update all steps in this phase</p>
+        
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Phase Name *</label>
+          <input 
+            value={name} 
+            onChange={e => setName(e.target.value)} 
+            style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} 
+          />
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
+          <button 
+            type="button" 
+            onClick={() => { if (confirm('Delete this phase and all its steps? This cannot be undone.')) { onDelete(phase); onClose(); } }}
+            style={{ padding: '10px 16px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
+          >
+            Delete Phase
+          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button type="button" onClick={onClose} style={{ padding: '10px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+            <button 
+              type="button" 
+              onClick={() => { if (name.trim() && name.trim() !== phase.subCat) { onRename(phase, name.trim()); } onClose(); }} 
+              disabled={!name.trim()}
+              style={{ padding: '10px 16px', background: name.trim() ? '#059669' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', cursor: name.trim() ? 'pointer' : 'not-allowed', fontSize: '13px' }}
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -909,6 +1010,7 @@ export default function Home() {
   const [addSequenceModal, setAddSequenceModal] = useState(false);
   const [addZoneModal, setAddZoneModal] = useState(false);
   const [editProjectModal, setEditProjectModal] = useState(null); // { item, type: 'project'|'zone' }
+  const [editPhaseModal, setEditPhaseModal] = useState(null); // { subCat, mainCat, villa }
   const [showArchived, setShowArchived] = useState(false);
   const [pendingChanges, setPendingChanges] = useState([]);
   const [pendingReviewModal, setPendingReviewModal] = useState(null);
@@ -1071,30 +1173,56 @@ export default function Home() {
   const getVisibleTasks = () => { 
     let tasks = kanbanTasks; 
     
-    // Filter by selected user
-    if (isManager && selectedTaskUser === null) { 
-      // Manager default: see all tasks
-    } else if (selectedTaskUser === 'all') { 
-      // Explicit "all" - see everything
-    } else if (selectedTaskUser) { 
-      tasks = tasks.filter(t => t.assignedTo === selectedTaskUser); 
-    } else { 
-      // Non-manager: see own tasks
-      tasks = tasks.filter(t => t.assignedTo === currentUser.id); 
+    // Determine which user we're filtering for
+    const filterUserId = selectedTaskUser === 'all' ? null : (selectedTaskUser || currentUser.id);
+    
+    if (filterUserId === null) {
+      // "All Tasks" view - show everything
+      return tasks;
     }
     
-    // For managers: ALWAYS include "To Be Reviewed" tasks from reports (even when filtered)
-    if (isManager && selectedTaskUser && selectedTaskUser !== 'all') {
-      const reviewTasks = kanbanTasks.filter(t => t.column === 'review' && t.assignedTo !== currentUser.id);
-      tasks = [...tasks, ...reviewTasks.filter(rt => !tasks.find(t => t.id === rt.id))];
-    }
+    // Filter for specific user: show tasks assigned to them OR tasks in "review" that need their review (if they're a manager)
+    const userIsManager = users.find(u => u.id === filterUserId)?.role === 'manager';
+    
+    tasks = tasks.filter(t => {
+      // Always include tasks assigned to this user
+      if (t.assignedTo === filterUserId) return true;
+      
+      // For managers: also include "To Be Reviewed" tasks from their reports (tasks not assigned to them)
+      if (userIsManager && t.column === 'review' && t.assignedTo !== filterUserId) return true;
+      
+      return false;
+    });
     
     return tasks; 
   };
   const visibleTasks = getVisibleTasks();
   const columns = [{ id: 'today', title: 'Today' }, { id: 'thisWeek', title: 'This Week' }, { id: 'waiting', title: 'Waiting / Follow-up' }, { id: 'review', title: 'To Be Reviewed' }, { id: 'later', title: 'Later' }, { id: 'done', title: 'Done' }];
 
-  const handleDrop = (columnId) => { if (draggedTask) { setKanbanTasks(prev => prev.map(t => t.id === draggedTask.id ? { ...t, column: columnId } : t)); setDraggedTask(null); setDragOverColumn(null); setDragOverTaskId(null); } };
+  const handleDrop = (columnId) => { 
+    if (draggedTask) { 
+      const fromColumn = draggedTask.column;
+      setKanbanTasks(prev => prev.map(t => t.id === draggedTask.id ? { 
+        ...t, 
+        column: columnId,
+        completedAt: columnId === 'done' ? new Date().toISOString() : t.completedAt,
+        statusHistory: [...(t.statusHistory || []), { from: fromColumn, to: columnId, userId: currentUser.id, timestamp: new Date().toISOString() }]
+      } : t)); 
+      setDraggedTask(null); 
+      setDragOverColumn(null); 
+      setDragOverTaskId(null); 
+    } 
+  };
+  
+  const handleQuickMove = (task, toColumn) => {
+    const fromColumn = task.column;
+    setKanbanTasks(prev => prev.map(t => t.id === task.id ? { 
+      ...t, 
+      column: toColumn,
+      completedAt: toColumn === 'done' ? new Date().toISOString() : t.completedAt,
+      statusHistory: [...(t.statusHistory || []), { from: fromColumn, to: toColumn, userId: currentUser.id, timestamp: new Date().toISOString() }]
+    } : t));
+  };
   const handleTaskUpdate = (updated) => { setKanbanTasks(prev => prev.map(t => t.id === updated.id ? updated : t)); if (updated.type === 'sc' && updated.buildingTaskId) { if (updated.scStatus === 'pendingArrival') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Supply Chain Pending Arrival', expectedArrival: updated.expectedArrival } : t)); if (updated.scStatus === 'readyToStart' || updated.column === 'done') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Ready to start (Supply Chain confirmed on-site)' } : t)); } };
   const handleTaskDelete = (id) => setKanbanTasks(prev => prev.filter(t => t.id !== id));
   const handleAddTask = () => { const newTask = { id: 'k' + Date.now(), title: 'New Task', assignedTo: currentUser.id, column: 'today', dueDate: TODAY, type: 'manual', createdAt: TODAY }; setKanbanTasks(prev => [...prev, newTask]); setTaskModal(newTask); };
@@ -1129,6 +1257,32 @@ export default function Home() {
       proposeChange('add_phase', { villa: currentVilla, mainCategory: data.mainCat, subCategory: data.subCat, newTask });
     }
   };
+  
+  const handleRenamePhase = (phase, newName) => {
+    // Rename the subCategory for all tasks in this phase/villa
+    setBuildingTasks(prev => prev.map(t => 
+      (t.villa === phase.villa && t.subCategory === phase.subCat) 
+        ? { ...t, subCategory: newName } 
+        : t
+    ));
+    // Also update options.task to move task options to new name
+    setOptions(prev => {
+      const newTaskOptions = { ...prev.task };
+      if (newTaskOptions[phase.subCat]) {
+        newTaskOptions[newName] = newTaskOptions[phase.subCat];
+        delete newTaskOptions[phase.subCat];
+      }
+      return { ...prev, task: newTaskOptions };
+    });
+  };
+  
+  const handleDeletePhase = (phase) => {
+    // Delete all tasks in this phase/villa
+    setBuildingTasks(prev => prev.filter(t => 
+      !(t.villa === phase.villa && t.subCategory === phase.subCat)
+    ));
+  };
+  
   const handleAddSequence = (label) => {
     const id = label.toLowerCase().replace(/\s+/g, '-');
     if (currentUser.isAdmin) {
@@ -1411,7 +1565,7 @@ export default function Home() {
       {/* Main Content */}
       <main style={{ flex: 1, overflowY: 'auto', padding: '24px', marginLeft: sidebarOpen ? '260px' : '0', paddingTop: sidebarOpen ? '24px' : '84px', transition: 'margin-left 0.3s ease' }}>
         {/* Task Board */}
-        {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{selectedTaskUser === 'all' ? 'All Tasks' : users.find(u => u.id === (selectedTaskUser || currentUser.id))?.username + "'s Tasks"}</p></div><select value={selectedTaskUser || currentUser.id} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : Number(e.target.value))} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}>{isManager && <option value="all">All Tasks</option>}{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={handleAddTask} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} currentUserId={currentUser.id} />)}</div></>)}
+        {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{selectedTaskUser === 'all' ? 'All Tasks' : users.find(u => u.id === (selectedTaskUser || currentUser.id))?.username + "'s Tasks"}</p></div><select value={selectedTaskUser || currentUser.id} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : Number(e.target.value))} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}>{isManager && <option value="all">All Tasks</option>}{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={handleAddTask} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} currentUserId={currentUser.id} onQuickMove={handleQuickMove} columns={columns} />)}</div></>)}
 
         {/* Recurring Tasks */}
         {activeNav === 'recurring' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Recurring Tasks</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredRecurring.length} tasks</p></div><select value={recurringFilter} onChange={e => setRecurringFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="all">All People</option>{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={() => setRecurringModal({})} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add</button></div>
@@ -1448,7 +1602,7 @@ export default function Home() {
               <button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add First Phase</button>
             </div>
           )}
-          {Object.entries(grouped).map(([subCat, catTasks]) => (<div key={subCat} style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>{subCat}</h3><span style={{ fontSize: '12px', color: '#6b7280' }}>{catTasks.length} steps</span></div><button type="button" onClick={() => setAddStepModal(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: '#fafafa' }}>{['', 'Readiness', 'Status', 'Steps', 'Task', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; return (<tr key={t.id} draggable onDragStart={(e) => handleRowDragStart(e, t, subCat)} onDragOver={(e) => handleRowDragOver(e, t)} onDrop={(e) => handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '30px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div></td><td style={{ padding: '8px' }}>{r.type !== 'sequenced' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div></td><td style={{ padding: '8px' }}><EditableCell value={t.step} onChange={v => editBuildingTask(t.id, 'step', v)} placeholder="Step name" /></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={options.task[subCat] || []} onChange={v => editBuildingTask(t.id, 'task', v)} placeholder="Select task..." /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => editBuildingTask(t.id, 'notes', v)} placeholder="Notes" /></td><td style={{ padding: '8px' }}><input type="date" value={t.earliestStart || ''} onChange={e => editBuildingTask(t.id, 'earliestStart', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => editBuildingTask(t.id, 'expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.duration} onChange={v => editBuildingTask(t.id, 'duration', v)} placeholder="0:00" /></td><td style={{ padding: '8px' }}><MultiSelect values={t.skilledWorkers} options={options.skilledWorker} onChange={v => editBuildingTask(t.id, 'skilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><MultiSelect values={t.unskilledWorkers} options={options.unskilledWorker} onChange={v => editBuildingTask(t.id, 'unskilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button></td><td style={{ padding: '8px' }}><button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button></td></tr>); })}</tbody></table></div></div>))}
+          {Object.entries(grouped).map(([subCat, catTasks]) => { const mainCat = catTasks[0]?.mainCategory || ''; return (<div key={subCat} style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>{subCat}</h3><span style={{ fontSize: '12px', color: '#6b7280' }}>{catTasks.length} steps</span></div>{currentUser.isAdmin && <button type="button" onClick={() => setEditPhaseModal({ subCat, mainCat, villa: currentVilla })} style={{ padding: '4px 8px', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer', color: '#6b7280', fontSize: '12px' }} title="Edit phase">✏️</button>}</div><button type="button" onClick={() => setAddStepModal(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: '#fafafa' }}>{['', 'Readiness', 'Status', 'Steps', 'Task', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; return (<tr key={t.id} draggable onDragStart={(e) => handleRowDragStart(e, t, subCat)} onDragOver={(e) => handleRowDragOver(e, t)} onDrop={(e) => handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '30px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div></td><td style={{ padding: '8px' }}>{r.type !== 'sequenced' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div></td><td style={{ padding: '8px' }}><EditableCell value={t.step} onChange={v => editBuildingTask(t.id, 'step', v)} placeholder="Step name" /></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={options.task[subCat] || []} onChange={v => editBuildingTask(t.id, 'task', v)} placeholder="Select task..." /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => editBuildingTask(t.id, 'notes', v)} placeholder="Notes" /></td><td style={{ padding: '8px' }}><input type="date" value={t.earliestStart || ''} onChange={e => editBuildingTask(t.id, 'earliestStart', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => editBuildingTask(t.id, 'expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.duration} onChange={v => editBuildingTask(t.id, 'duration', v)} placeholder="0:00" /></td><td style={{ padding: '8px' }}><MultiSelect values={t.skilledWorkers} options={options.skilledWorker} onChange={v => editBuildingTask(t.id, 'skilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><MultiSelect values={t.unskilledWorkers} options={options.unskilledWorker} onChange={v => editBuildingTask(t.id, 'unskilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button></td><td style={{ padding: '8px' }}><button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button></td></tr>); })}</tbody></table></div></div>); })}
         </>)}
 
         {/* Daily Worker Schedule */}
@@ -2071,6 +2225,7 @@ export default function Home() {
       {recurringModal && <RecurringTaskModal task={recurringModal.id ? recurringModal : null} onClose={() => setRecurringModal(null)} onSave={handleRecurringSave} onDelete={handleRecurringDelete} users={users} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
       {addStepModal && <AddStepModal isOpen={!!addStepModal} onClose={() => setAddStepModal(null)} onAdd={(data) => handleAddStep(addStepModal, data)} subCategory={addStepModal} options={options} setOptions={setOptions} />}
       {addPhaseModal && <AddPhaseModal isOpen={addPhaseModal} onClose={() => setAddPhaseModal(false)} onAdd={handleAddPhase} villa={currentProject} options={options} setOptions={setOptions} />}
+      {editPhaseModal && <EditPhaseModal phase={editPhaseModal} onClose={() => setEditPhaseModal(null)} onRename={handleRenamePhase} onDelete={handleDeletePhase} />}
       {workerModal && <WorkerModal worker={workerModal.id ? workerModal : null} onClose={() => setWorkerModal(null)} onSave={(w) => { if (w.id && workforce.find(x => x.id === w.id)) { setWorkforce(prev => prev.map(x => x.id === w.id ? w : x)); } else { setWorkforce(prev => [...prev, w]); } }} onDelete={(id) => setWorkforce(prev => prev.filter(w => w.id !== id))} options={options} setOptions={setOptions} />}
       {addSequenceModal && <AddSequenceModal onClose={() => setAddSequenceModal(false)} onAdd={handleAddSequence} />}
       {addZoneModal && <AddZoneModal onClose={() => setAddZoneModal(false)} onAdd={handleAddZone} />}
