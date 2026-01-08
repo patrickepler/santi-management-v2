@@ -162,6 +162,7 @@ const Icon = ({ name, size = 20 }) => {
     home: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
     check: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
     edit: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+    copy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
   };
   return icons[name] || null;
 };
@@ -475,128 +476,83 @@ const RecurringTaskModal = ({ task, onClose, onSave, onDelete, users, comments, 
 };
 
 // ============ ADD STEP MODAL ============
-const AddStepModal = ({ isOpen, onClose, onAdd, subCategory, options, setOptions }) => {
-  const [task, setTask] = useState('');
-  const [step, setStep] = useState('');
-  const [newTask, setNewTask] = useState('');
-  const [showNewTask, setShowNewTask] = useState(false);
-  if (!isOpen) return null;
-  const taskOptions = options.task[subCategory] || [];
-  const handleAddNewTask = () => { if (newTask.trim()) { setOptions(prev => ({ ...prev, task: { ...prev.task, [subCategory]: [...(prev.task[subCategory] || []), newTask.trim()] } })); setTask(newTask.trim()); setNewTask(''); setShowNewTask(false); } };
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
-        <h2 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '600' }}>Add Step to {subCategory}</h2>
-        <p style={{ margin: '0 0 20px', fontSize: '12px', color: '#6b7280' }}>Phase → Steps → Task</p>
-        
-        {/* Step Name - First */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Step Name *</label>
-          <input value={step} onChange={e => setStep(e.target.value)} placeholder="e.g., Prefab Re-Bar, Set up Formwork" style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
-        </div>
-        
-        {/* Task - Second */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Task Category *</label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <select value={task} onChange={e => setTask(e.target.value)} style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }}><option value="">Select or add new...</option>{taskOptions.map(t => <option key={t} value={t}>{t}</option>)}</select>
-            <button type="button" onClick={() => setShowNewTask(!showNewTask)} style={{ padding: '10px 14px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#059669' }}>+ New</button>
-          </div>
-          {showNewTask && <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}><input value={newTask} onChange={e => setNewTask(e.target.value)} placeholder="e.g., Re-Bar, Formwork, Concrete" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} /><button type="button" onClick={handleAddNewTask} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Add</button></div>}
-        </div>
-        
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { if (task && step) { onAdd({ task, step }); onClose(); setTask(''); setStep(''); } }} disabled={!task || !step} style={{ padding: '10px 20px', background: task && step ? '#059669' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', cursor: task && step ? 'pointer' : 'not-allowed' }}>Add Step</button></div>
-      </div>
-    </div>
-  );
-};
-
-// ============ ADD PHASE MODAL ============
+// ============ ADD PHASE MODAL - Simplified for quick multi-add ============
 const AddPhaseModal = ({ isOpen, onClose, onAdd, villa, options, setOptions }) => {
-  const [mainCat, setMainCat] = useState('');
-  const [subCat, setSubCat] = useState('');
-  const [showNewMainCat, setShowNewMainCat] = useState(false);
-  const [showNewSubCat, setShowNewSubCat] = useState(false);
-  const [newMainCat, setNewMainCat] = useState('');
-  const [newSubCat, setNewSubCat] = useState('');
+  const [phaseName, setPhaseName] = useState('');
+  const [addedPhases, setAddedPhases] = useState([]);
+  const [mainCat, setMainCat] = useState(options.mainCategory[0] || '');
   
   if (!isOpen) return null;
-  const subCatOptions = mainCat && options.subCategory[mainCat] ? options.subCategory[mainCat] : [];
   
-  const handleAddNewMainCat = () => {
-    if (newMainCat.trim()) {
-      const catName = newMainCat.trim();
-      setOptions(prev => ({
-        ...prev,
-        mainCategory: [...prev.mainCategory, catName],
-        subCategory: { ...prev.subCategory, [catName]: [] }
-      }));
-      setMainCat(catName);
-      setNewMainCat('');
-      setShowNewMainCat(false);
+  const handleAddPhase = () => {
+    if (phaseName.trim()) {
+      const name = phaseName.trim();
+      onAdd({ mainCat, subCat: name });
+      setAddedPhases(prev => [...prev, name]);
+      setPhaseName('');
     }
   };
   
-  const handleAddNewSubCat = () => {
-    if (newSubCat.trim() && mainCat) {
-      const subName = newSubCat.trim();
-      setOptions(prev => ({
-        ...prev,
-        subCategory: { 
-          ...prev.subCategory, 
-          [mainCat]: [...(prev.subCategory[mainCat] || []), subName] 
-        }
-      }));
-      setSubCat(subName);
-      setNewSubCat('');
-      setShowNewSubCat(false);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && phaseName.trim()) {
+      e.preventDefault();
+      handleAddPhase();
     }
   };
   
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={onClose}>
       <div style={{ width: '100%', maxWidth: '450px', background: '#fff', borderRadius: '16px', padding: '24px' }} onClick={e => e.stopPropagation()}>
-        <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600' }}>Add Phase to {villa}</h2>
+        <h2 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '600' }}>Add Phases to {villa}</h2>
+        <p style={{ margin: '0 0 20px', fontSize: '12px', color: '#6b7280' }}>Type a name and press Enter to add. Add as many as you need.</p>
         
-        {/* Main Category */}
+        {/* Main Category - Simple select */}
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Main Category</label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <select value={mainCat} onChange={e => { setMainCat(e.target.value); setSubCat(''); }} style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>
-              <option value="">Select or add new...</option>
-              {options.mainCategory.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-            <button type="button" onClick={() => setShowNewMainCat(!showNewMainCat)} style={{ padding: '10px 14px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#059669' }}>+ New</button>
-          </div>
-          {showNewMainCat && (
-            <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-              <input value={newMainCat} onChange={e => setNewMainCat(e.target.value)} placeholder="e.g., 5 Roofing" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
-              <button type="button" onClick={handleAddNewMainCat} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Add</button>
-            </div>
-          )}
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Category (optional)</label>
+          <select value={mainCat} onChange={e => setMainCat(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>
+            {options.mainCategory.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
         </div>
         
-        {/* Sub-Category (Phase) */}
+        {/* Phase Name - Quick input */}
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Sub-Category (Phase)</label>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Phase Name</label>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <select value={subCat} onChange={e => setSubCat(e.target.value)} disabled={!mainCat} style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', opacity: mainCat ? 1 : 0.5 }}>
-              <option value="">Select or add new...</option>
-              {subCatOptions.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <button type="button" onClick={() => setShowNewSubCat(!showNewSubCat)} disabled={!mainCat} style={{ padding: '10px 14px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: mainCat ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: '600', color: '#059669', opacity: mainCat ? 1 : 0.5 }}>+ New</button>
+            <input 
+              value={phaseName} 
+              onChange={e => setPhaseName(e.target.value)} 
+              onKeyDown={handleKeyDown}
+              placeholder="e.g., Dig Trenches, Install Wiring, Plaster Walls" 
+              style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} 
+              autoFocus
+            />
+            <button 
+              type="button" 
+              onClick={handleAddPhase}
+              disabled={!phaseName.trim()}
+              style={{ padding: '12px 20px', background: phaseName.trim() ? '#059669' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', cursor: phaseName.trim() ? 'pointer' : 'not-allowed', fontWeight: '600' }}
+            >
+              Add
+            </button>
           </div>
-          {showNewSubCat && mainCat && (
-            <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-              <input value={newSubCat} onChange={e => setNewSubCat(e.target.value)} placeholder="e.g., Tile Installation" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
-              <button type="button" onClick={handleAddNewSubCat} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Add</button>
-            </div>
-          )}
         </div>
         
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-          <button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
-          <button type="button" onClick={() => { if (mainCat && subCat) { onAdd({ mainCat, subCat }); onClose(); setMainCat(''); setSubCat(''); } }} disabled={!mainCat || !subCat} style={{ padding: '10px 20px', background: mainCat && subCat ? '#059669' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', cursor: mainCat && subCat ? 'pointer' : 'not-allowed' }}>Add Phase</button>
+        {/* Recently Added */}
+        {addedPhases.length > 0 && (
+          <div style={{ marginBottom: '16px', padding: '12px', background: '#f0fdf4', borderRadius: '8px' }}>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#059669', marginBottom: '8px' }}>Added ({addedPhases.length}):</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {addedPhases.map((p, i) => (
+                <span key={i} style={{ padding: '4px 10px', background: '#fff', borderRadius: '4px', fontSize: '12px', border: '1px solid #a7f3d0' }}>{p}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
+          <button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+            {addedPhases.length > 0 ? 'Done' : 'Cancel'}
+          </button>
         </div>
       </div>
     </div>
@@ -977,7 +933,44 @@ const PendingReviewModal = ({ change, onClose, onApprove, onReject, onComment, u
 };
 
 // ============ BUILDING SEQUENCE COMPONENTS ============
-const Dropdown = ({ value, options, onChange, placeholder }) => { const [open, setOpen] = useState(false); const ref = useRef(null); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ width: '100%', padding: '6px 10px', fontSize: '13px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', textAlign: 'left', cursor: 'pointer', color: value ? '#1f2937' : '#9ca3af' }}>{value || placeholder}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '180px', overflowY: 'auto' }}>{options.map((o,i) => <div key={i} onClick={() => { onChange(o); setOpen(false); }} style={{ padding: '8px 12px', cursor: 'pointer', background: o === value ? '#f3f4f6' : 'transparent' }}>{o}</div>)}</div>}</div>); };
+const Dropdown = ({ value, options, onChange, placeholder, allowNew, onAddNew }) => { 
+  const [open, setOpen] = useState(false); 
+  const [newValue, setNewValue] = useState('');
+  const ref = useRef(null); 
+  useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); 
+  const handleAddNew = () => {
+    if (newValue.trim() && onAddNew) {
+      onAddNew(newValue.trim());
+      setNewValue('');
+      setOpen(false);
+    }
+  };
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen(!open)} style={{ width: '100%', padding: '6px 10px', fontSize: '13px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', textAlign: 'left', cursor: 'pointer', color: value ? '#1f2937' : '#9ca3af' }}>{value || placeholder}</button>
+      {open && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '220px', overflowY: 'auto', minWidth: '150px' }}>
+          {options.map((o,i) => <div key={i} onClick={() => { onChange(o); setOpen(false); }} style={{ padding: '8px 12px', cursor: 'pointer', background: o === value ? '#f3f4f6' : 'transparent', fontSize: '13px' }}>{o}</div>)}
+          {allowNew && (
+            <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px' }}>
+              <input 
+                value={newValue} 
+                onChange={e => setNewValue(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && handleAddNew()}
+                placeholder="Type new..." 
+                style={{ width: '100%', padding: '6px 8px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box' }}
+                onClick={e => e.stopPropagation()}
+              />
+              {newValue.trim() && (
+                <button type="button" onClick={handleAddNew} style={{ width: '100%', marginTop: '4px', padding: '4px', background: '#059669', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Add "{newValue}"</button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  ); 
+};
 
 const StatusDropdown = ({ value, options, onChange }) => { const [open, setOpen] = useState(false); const ref = useRef(null); const style = getStatusStyle(value); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); const short = s => s === 'Ready to start (Supply Chain confirmed on-site)' ? 'Ready' : s === 'Supply Chain Arrived to be Confirmed' ? 'SC Arrived' : (s || 'Set status').replace('Supply Chain Pending', 'SC'); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', fontSize: '12px', fontWeight: '500', background: style.bg, border: 'none', borderRadius: '6px', color: style.color, cursor: 'pointer', whiteSpace: 'nowrap' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: style.dot }} />{short(value)}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, minWidth: '260px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100 }}>{options.map((o,i) => { const s = getStatusStyle(o); return <div key={i} onClick={() => { onChange(o); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.dot }} />{o}</div>; })}</div>}</div>); };
 
@@ -1005,7 +998,6 @@ export default function Home() {
   const [recurringFilter, setRecurringFilter] = useState('all');
   const [taskModal, setTaskModal] = useState(null);
   const [recurringModal, setRecurringModal] = useState(null);
-  const [addStepModal, setAddStepModal] = useState(null);
   const [addPhaseModal, setAddPhaseModal] = useState(false);
   const [addSequenceModal, setAddSequenceModal] = useState(false);
   const [addZoneModal, setAddZoneModal] = useState(false);
@@ -1240,17 +1232,41 @@ export default function Home() {
       proposeChange('delete', { taskId: id, villa: task?.villa, subCategory: task?.subCategory, step: task?.step });
     }
   };
-  const handleAddStep = (subCat, data) => { 
-    const maxOrder = Math.max(0, ...buildingTasks.filter(t => t.subCategory === subCat).map(t => t.order)); 
-    const newTask = { id: Date.now(), order: maxOrder + 1, villa: currentVilla, mainCategory: '2 Foundation', subCategory: subCat, task: data.task, step: data.step, notes: '', status: 'Ready to start (Supply Chain confirmed on-site)', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' };
+  // Add blank step directly (no modal)
+  const handleAddStep = (subCat) => { 
+    const tasksInPhase = buildingTasks.filter(t => t.villa === currentVilla && t.subCategory === subCat);
+    const maxOrder = Math.max(0, ...tasksInPhase.map(t => t.order));
+    const mainCat = tasksInPhase[0]?.mainCategory || '2 Foundation';
+    const newTask = { id: Date.now(), order: maxOrder + 1, villa: currentVilla, mainCategory: mainCat, subCategory: subCat, task: '', step: '', notes: '', status: 'Ready to start (Supply Chain confirmed on-site)', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' };
     if (currentUser.isAdmin) {
       setBuildingTasks(prev => [...prev, newTask]); 
     } else {
       proposeChange('add_step', { villa: currentVilla, subCategory: subCat, newTask });
     }
   };
+  
+  // Duplicate an existing step (copy task, workers, etc.)
+  const handleDuplicateStep = (sourceTask) => {
+    const tasksInPhase = buildingTasks.filter(t => t.villa === currentVilla && t.subCategory === sourceTask.subCategory);
+    const maxOrder = Math.max(0, ...tasksInPhase.map(t => t.order));
+    const newTask = { 
+      ...sourceTask, 
+      id: Date.now(), 
+      order: maxOrder + 1, 
+      step: sourceTask.step + ' (copy)',
+      status: 'Ready to start (Supply Chain confirmed on-site)',
+      expectedArrival: '',
+      earliestStart: ''
+    };
+    if (currentUser.isAdmin) {
+      setBuildingTasks(prev => [...prev, newTask]); 
+    } else {
+      proposeChange('add_step', { villa: currentVilla, subCategory: sourceTask.subCategory, newTask });
+    }
+  };
+  
   const handleAddPhase = (data) => { 
-    const newTask = { id: Date.now(), order: 1, villa: currentVilla, mainCategory: data.mainCat, subCategory: data.subCat, task: '', step: 'New step', notes: '', status: 'Ready to start (Supply Chain confirmed on-site)', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' };
+    const newTask = { id: Date.now(), order: 1, villa: currentVilla, mainCategory: data.mainCat, subCategory: data.subCat, task: '', step: '', notes: '', status: 'Ready to start (Supply Chain confirmed on-site)', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' };
     if (currentUser.isAdmin) {
       setBuildingTasks(prev => [...prev, newTask]); 
     } else {
@@ -1602,7 +1618,7 @@ export default function Home() {
               <button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add First Phase</button>
             </div>
           )}
-          {Object.entries(grouped).map(([subCat, catTasks]) => { const mainCat = catTasks[0]?.mainCategory || ''; return (<div key={subCat} style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>{subCat}</h3><span style={{ fontSize: '12px', color: '#6b7280' }}>{catTasks.length} steps</span></div>{currentUser.isAdmin && <button type="button" onClick={() => setEditPhaseModal({ subCat, mainCat, villa: currentVilla })} style={{ padding: '4px 8px', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer', color: '#6b7280', fontSize: '12px' }} title="Edit phase">✏️</button>}</div><button type="button" onClick={() => setAddStepModal(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: '#fafafa' }}>{['', 'Readiness', 'Status', 'Steps', 'Task', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; return (<tr key={t.id} draggable onDragStart={(e) => handleRowDragStart(e, t, subCat)} onDragOver={(e) => handleRowDragOver(e, t)} onDrop={(e) => handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '30px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div></td><td style={{ padding: '8px' }}>{r.type !== 'sequenced' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div></td><td style={{ padding: '8px' }}><EditableCell value={t.step} onChange={v => editBuildingTask(t.id, 'step', v)} placeholder="Step name" /></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={options.task[subCat] || []} onChange={v => editBuildingTask(t.id, 'task', v)} placeholder="Select task..." /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => editBuildingTask(t.id, 'notes', v)} placeholder="Notes" /></td><td style={{ padding: '8px' }}><input type="date" value={t.earliestStart || ''} onChange={e => editBuildingTask(t.id, 'earliestStart', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => editBuildingTask(t.id, 'expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.duration} onChange={v => editBuildingTask(t.id, 'duration', v)} placeholder="0:00" /></td><td style={{ padding: '8px' }}><MultiSelect values={t.skilledWorkers} options={options.skilledWorker} onChange={v => editBuildingTask(t.id, 'skilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><MultiSelect values={t.unskilledWorkers} options={options.unskilledWorker} onChange={v => editBuildingTask(t.id, 'unskilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button></td><td style={{ padding: '8px' }}><button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button></td></tr>); })}</tbody></table></div></div>); })}
+          {Object.entries(grouped).map(([subCat, catTasks]) => { const mainCat = catTasks[0]?.mainCategory || ''; return (<div key={subCat} style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>{subCat}</h3><span style={{ fontSize: '12px', color: '#6b7280' }}>{catTasks.length} steps</span></div>{currentUser.isAdmin && <button type="button" onClick={() => setEditPhaseModal({ subCat, mainCat, villa: currentVilla })} style={{ padding: '4px 8px', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer', color: '#6b7280', fontSize: '12px' }} title="Edit phase">✏️</button>}</div><button type="button" onClick={() => handleAddStep(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: '#fafafa' }}>{['', 'Readiness', 'Status', 'Steps', 'Task', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; return (<tr key={t.id} draggable onDragStart={(e) => handleRowDragStart(e, t, subCat)} onDragOver={(e) => handleRowDragOver(e, t)} onDrop={(e) => handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '30px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div></td><td style={{ padding: '8px' }}>{r.type !== 'sequenced' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div></td><td style={{ padding: '8px' }}><EditableCell value={t.step} onChange={v => editBuildingTask(t.id, 'step', v)} placeholder="Step name" /></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={options.task[subCat] || []} onChange={v => editBuildingTask(t.id, 'task', v)} placeholder="Select task..." allowNew onAddNew={(newTask) => { setOptions(prev => ({ ...prev, task: { ...prev.task, [subCat]: [...(prev.task[subCat] || []), newTask] } })); editBuildingTask(t.id, 'task', newTask); }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => editBuildingTask(t.id, 'notes', v)} placeholder="Notes" /></td><td style={{ padding: '8px' }}><input type="date" value={t.earliestStart || ''} onChange={e => editBuildingTask(t.id, 'earliestStart', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => editBuildingTask(t.id, 'expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.duration} onChange={v => editBuildingTask(t.id, 'duration', v)} placeholder="0:00" /></td><td style={{ padding: '8px' }}><MultiSelect values={t.skilledWorkers} options={options.skilledWorker} onChange={v => editBuildingTask(t.id, 'skilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><MultiSelect values={t.unskilledWorkers} options={options.unskilledWorker} onChange={v => editBuildingTask(t.id, 'unskilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button></td><td style={{ padding: '8px', display: 'flex', gap: '4px' }}><button type="button" onClick={() => handleDuplicateStep(t)} title="Duplicate row" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '6px' }}><Icon name="copy" size={16} /></button><button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button></td></tr>); })}</tbody></table></div></div>); })}
         </>)}
 
         {/* Daily Worker Schedule */}
@@ -2223,7 +2239,6 @@ export default function Home() {
       {/* Modals & Panels */}
       {taskModal && <TaskModal task={taskModal} onClose={() => setTaskModal(null)} onUpdate={handleTaskUpdate} onDelete={handleTaskDelete} users={users} buildingTasks={buildingTasks} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
       {recurringModal && <RecurringTaskModal task={recurringModal.id ? recurringModal : null} onClose={() => setRecurringModal(null)} onSave={handleRecurringSave} onDelete={handleRecurringDelete} users={users} comments={comments} setComments={setComments} currentUser={currentUser} setNotifications={setNotifications} />}
-      {addStepModal && <AddStepModal isOpen={!!addStepModal} onClose={() => setAddStepModal(null)} onAdd={(data) => handleAddStep(addStepModal, data)} subCategory={addStepModal} options={options} setOptions={setOptions} />}
       {addPhaseModal && <AddPhaseModal isOpen={addPhaseModal} onClose={() => setAddPhaseModal(false)} onAdd={handleAddPhase} villa={currentProject} options={options} setOptions={setOptions} />}
       {editPhaseModal && <EditPhaseModal phase={editPhaseModal} onClose={() => setEditPhaseModal(null)} onRename={handleRenamePhase} onDelete={handleDeletePhase} />}
       {workerModal && <WorkerModal worker={workerModal.id ? workerModal : null} onClose={() => setWorkerModal(null)} onSave={(w) => { if (w.id && workforce.find(x => x.id === w.id)) { setWorkforce(prev => prev.map(x => x.id === w.id ? w : x)); } else { setWorkforce(prev => [...prev, w]); } }} onDelete={(id) => setWorkforce(prev => prev.filter(w => w.id !== id))} options={options} setOptions={setOptions} />}
