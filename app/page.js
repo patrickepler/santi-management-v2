@@ -1,6 +1,8 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useUser, SignIn, SignOutButton } from '@clerk/nextjs';
+// TODO: Uncomment after running supabase-schema.sql
+// import { db, supabase, subscribeToAll } from './lib/supabase';
 
 // ============ USERS ============
 const mockUsers = [
@@ -1049,7 +1051,7 @@ const EditableCell = ({ value, onChange, placeholder }) => { const [editing, set
 const MultiSelect = ({ values = [], options, onChange, placeholder }) => { const [open, setOpen] = useState(false); const ref = useRef(null); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); const toggle = (opt) => onChange(values.includes(opt) ? values.filter(v => v !== opt) : [...values, opt]); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ width: '100%', padding: '6px 10px', fontSize: '12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', textAlign: 'left', cursor: 'pointer', color: values.length ? '#1f2937' : '#9ca3af', minHeight: '32px' }}>{values.length ? values.join(', ') : placeholder}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '200px', overflowY: 'auto' }}><div onClick={() => onChange([])} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #e5e7eb', color: '#dc2626', fontSize: '12px' }}>Clear all</div>{options.map((o, i) => <div key={i} onClick={() => toggle(o)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer', background: values.includes(o) ? '#ecfdf5' : 'transparent' }}><span style={{ width: '16px', height: '16px', border: values.includes(o) ? '2px solid #059669' : '1px solid #d1d5db', borderRadius: '4px', background: values.includes(o) ? '#059669' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px' }}>{values.includes(o) && '✓'}</span>{o}</div>)}</div>}</div>); };
 
 // ============ MAIN APP ============
-// LocalStorage helpers
+// LocalStorage helpers (fallback when Supabase not available)
 const STORAGE_KEY = 'santi_management_data';
 
 const loadFromStorage = () => {
@@ -1076,8 +1078,10 @@ export default function Home() {
   const { isLoaded, isSignedIn, user: clerkUser } = useUser();
   const [users] = useState(mockUsers);
   const [demoMode, setDemoMode] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [useSupabase, setUseSupabase] = useState(false); // Will enable after Supabase setup
   
-  // Load saved data from localStorage on mount
+  // Load saved data from localStorage initially (will be overwritten by Supabase if available)
   const [savedData] = useState(() => loadFromStorage());
   
   const [buildingTasks, setBuildingTasks] = useState(() => savedData?.buildingTasks || initialBuildingTasks);
@@ -1119,6 +1123,7 @@ export default function Home() {
   const [editProjectModal, setEditProjectModal] = useState(null); // { item, type: 'project'|'zone' }
   const [editPhaseModal, setEditPhaseModal] = useState(null); // { subCat, mainCat, villa }
   const [showArchived, setShowArchived] = useState(false);
+  const [showArchivedRecurring, setShowArchivedRecurring] = useState(false);
   const [pendingChanges, setPendingChanges] = useState([]);
   const [pendingReviewModal, setPendingReviewModal] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
@@ -1329,6 +1334,11 @@ export default function Home() {
   const handleAddTask = () => { const newTask = { id: 'k' + Date.now(), title: 'New Task', assignedTo: currentUser.id, column: 'today', dueDate: TODAY, type: 'manual', createdAt: TODAY }; setKanbanTasks(prev => [...prev, newTask]); setTaskModal(newTask); };
   const handleRecurringSave = (task) => { if (task.id) { setRecurringTasks(prev => prev.map(t => t.id === task.id ? task : t)); } else { setRecurringTasks(prev => [...prev, { ...task, id: 'r' + Date.now(), createdAt: TODAY }]); } };
   const handleRecurringDelete = (id) => setRecurringTasks(prev => prev.filter(t => t.id !== id));
+  const handleDuplicateRecurring = (task) => {
+    const newTask = { ...task, id: 'r' + Date.now(), title: task.title + ' (copy)', createdAt: TODAY };
+    setRecurringTasks(prev => [...prev, newTask]);
+    setRecurringModal(newTask); // Open modal to edit the copy
+  };
 
   const handleRowDragStart = (e, task, subCat) => { setDraggedRow({ ...task, subCategory: subCat }); e.dataTransfer.effectAllowed = 'move'; };
   const handleRowDragOver = (e, task) => { e.preventDefault(); if (draggedRow && task.id !== draggedRow.id) setDragOverRow(task.id); };
@@ -1579,7 +1589,6 @@ export default function Home() {
 
   const unreadCount = notifications.filter(n => n.userId === currentUser.id && !n.read).length;
   const activeTask = activeComments ? buildingTasks.find(t => t.id === activeComments) : null;
-  const [showArchivedRecurring, setShowArchivedRecurring] = useState(false);
   const filteredRecurring = recurringTasks
     .filter(rt => showArchivedRecurring || rt.status !== 'archived')
     .filter(rt => recurringFilter === 'all' || rt.assignedTo === Number(recurringFilter));
@@ -1713,10 +1722,13 @@ export default function Home() {
               {freq === 'specific' && `${rt.specificDates.length} scheduled dates`}
               {freq === 'daily' && 'Every day'}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '12px', borderTop: '1px solid #f3f4f6' }}>
-              {rt.estTime && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280' }}>🕐 {rt.estTime}h</span>}
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280' }}>👤 {assignee?.username}</span>
-              {commentCount > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#059669' }}>💬 {commentCount}</span>}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid #f3f4f6' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {rt.estTime && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280' }}>🕐 {rt.estTime}h</span>}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280' }}>👤 {assignee?.username}</span>
+                {commentCount > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#059669' }}>💬 {commentCount}</span>}
+              </div>
+              <button type="button" onClick={(e) => { e.stopPropagation(); handleDuplicateRecurring(rt); }} title="Duplicate" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px' }}><Icon name="copy" size={14} /></button>
             </div>
           </div>); })}</div></div>); })}
         </>)}
