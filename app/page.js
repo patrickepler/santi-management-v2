@@ -1077,7 +1077,7 @@ const saveToStorage = (data) => {
 
 export default function Home() {
   const { isLoaded, isSignedIn, user: clerkUser } = useUser();
-  const [users] = useState(mockUsers);
+  const [users, setUsers] = useState(mockUsers);
   const [demoMode, setDemoMode] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [supabaseLoading, setSupabaseLoading] = useState(true);
@@ -1144,6 +1144,53 @@ export default function Home() {
   // Close sidebar on mobile by default
   useEffect(() => { if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false); }, []);
 
+  // Sync Clerk user to Supabase profiles when logged in
+  useEffect(() => {
+    const syncClerkUser = async () => {
+      if (!isSignedIn || !clerkUser || demoMode) return;
+
+      try {
+        const email = clerkUser.primaryEmailAddress?.emailAddress;
+        if (!email) return;
+
+        // Check if user already exists in mockUsers (skip sync for demo users)
+        if (mockUsers.some(u => u.email === email)) {
+          console.log('📝 User exists in mockUsers, skipping Supabase sync');
+          return;
+        }
+
+        // Upsert to Supabase profiles
+        const profile = await db.profiles.upsert({
+          email,
+          username: clerkUser.firstName || clerkUser.username || email.split('@')[0],
+          avatarUrl: clerkUser.imageUrl,
+          role: 'worker', // Default role for new users
+        });
+
+        if (profile) {
+          // Add to local users state if not already there
+          setUsers(prev => {
+            if (prev.some(u => u.email === email)) return prev;
+            return [...prev, {
+              id: profile.id,
+              email: profile.email,
+              username: profile.username,
+              avatar: profile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.username)}&background=059669&color=fff`,
+              role: profile.role || 'worker',
+              isAdmin: profile.role === 'manager',
+              managerId: profile.managerId,
+            }];
+          });
+          console.log('✅ Synced Clerk user to Supabase:', email);
+        }
+      } catch (err) {
+        console.error('❌ Error syncing Clerk user to Supabase:', err);
+      }
+    };
+
+    syncClerkUser();
+  }, [isSignedIn, clerkUser, demoMode]);
+
   // Load data from Supabase on mount
   useEffect(() => {
     const loadFromSupabase = async () => {
@@ -1174,6 +1221,24 @@ export default function Home() {
         }
         if (data.buildingSequences && data.buildingSequences.standalone) {
           setBuildingSequences(data.buildingSequences);
+        }
+
+        // Load profiles and merge with mockUsers (keep mockUsers as fallback for numeric IDs)
+        if (data.profiles && data.profiles.length > 0) {
+          const supabaseUsers = data.profiles.map(p => ({
+            id: p.id, // UUID from Supabase
+            email: p.email,
+            username: p.username,
+            avatar: p.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.username)}&background=059669&color=fff`,
+            role: p.role || 'worker',
+            isAdmin: p.role === 'manager',
+            managerId: p.managerId,
+          }));
+          // Merge: mockUsers as base, append real users from Supabase
+          const existingEmails = mockUsers.map(u => u.email);
+          const newUsers = supabaseUsers.filter(u => !existingEmails.includes(u.email));
+          setUsers([...mockUsers, ...newUsers]);
+          console.log(`✅ Loaded ${supabaseUsers.length} profiles from Supabase`);
         }
 
         console.log('✅ Loaded data from Supabase');
