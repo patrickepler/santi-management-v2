@@ -1159,13 +1159,23 @@ export default function Home() {
           return;
         }
 
-        // Upsert to Supabase profiles
-        const profile = await db.profiles.upsert({
+        // Check if profile already exists in Supabase
+        const existingProfile = await db.profiles.getByEmail(email);
+
+        // Only upsert basic info, preserve existing role
+        const profileData = {
           email,
           username: clerkUser.firstName || clerkUser.username || email.split('@')[0],
           avatarUrl: clerkUser.imageUrl,
-          role: 'worker', // Default role for new users
-        });
+        };
+
+        // Only set default role for new users
+        if (!existingProfile) {
+          profileData.role = 'worker';
+        }
+
+        // Upsert to Supabase profiles
+        const profile = await db.profiles.upsert(profileData);
 
         if (profile) {
           // Add to local users state if not already there
@@ -1181,7 +1191,7 @@ export default function Home() {
               managerId: profile.managerId,
             }];
           });
-          console.log('✅ Synced Clerk user to Supabase:', email);
+          console.log('✅ Synced Clerk user to Supabase:', email, 'role:', profile.role);
         }
       } catch (err) {
         console.error('❌ Error syncing Clerk user to Supabase:', err);
