@@ -1130,7 +1130,7 @@ export default function Home() {
   const [editPhaseModal, setEditPhaseModal] = useState(null); // { subCat, mainCat, villa }
   const [showArchived, setShowArchived] = useState(false);
   const [showArchivedRecurring, setShowArchivedRecurring] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState([]);
+  const [pendingChanges, setPendingChanges] = useState(() => savedData?.pendingChanges || []);
   const [pendingReviewModal, setPendingReviewModal] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
@@ -1280,7 +1280,8 @@ export default function Home() {
       notifications,
       options,
       workforce,
-      buildingSequences
+      buildingSequences,
+      pendingChanges
     });
 
     // Debounce Supabase saves to avoid too many requests
@@ -1309,7 +1310,7 @@ export default function Home() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, buildingSequences]);
+  }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, buildingSequences, pendingChanges]);
 
   if (!isLoaded || supabaseLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}><div style={{ color: '#fff', fontSize: '18px' }}>{supabaseLoading ? '🔄 Syncing with database...' : 'Loading...'}</div>{supabaseError && <div style={{ color: '#fef3c7', fontSize: '14px' }}>⚠️ Using offline mode</div>}</div>;
   if (!isSignedIn && !demoMode) return <LoginScreen onDemoLogin={(user) => setDemoMode(user)} />;
