@@ -1059,6 +1059,11 @@ const EditableCell = ({ value, onChange, placeholder, disabled }) => { const [ed
 
 // Component for showing a pending field edit with approve/reject buttons
 const PendingField = ({ pending, displayValue, oldValue, onApprove, onReject, isAdmin, isOwn, onEdit, editComponent }) => {
+  const formatOldValue = (val) => {
+    if (val === undefined || val === null || val === '') return '(empty)';
+    if (Array.isArray(val)) return val.length ? val.join(', ') : '(none)';
+    return val;
+  };
   // If owner wants to edit, show the edit component instead
   if (isOwn && editComponent) {
     return (
@@ -1072,9 +1077,9 @@ const PendingField = ({ pending, displayValue, oldValue, onApprove, onReject, is
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-      {isAdmin && oldValue !== undefined && (
-        <div style={{ fontSize: '10px', color: '#6b7280', textDecoration: 'line-through', marginBottom: '2px' }}>
-          {Array.isArray(oldValue) ? (oldValue.length ? oldValue.join(', ') : 'None') : (oldValue || '(empty)')}
+      {isAdmin && (
+        <div style={{ fontSize: '10px', color: '#9ca3af', textDecoration: 'line-through', marginBottom: '2px' }}>
+          Was: {formatOldValue(oldValue)}
         </div>
       )}
       <div style={{ padding: '6px', border: '2px solid #9333ea', borderRadius: '6px', fontSize: '12px', background: 'rgba(147,51,234,0.1)', minWidth: '60px' }}>{displayValue || '(empty)'}</div>
