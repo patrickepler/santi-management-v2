@@ -1512,7 +1512,10 @@ export default function Home() {
         setSyncError(null);
         
         // First test connection
-        await testConnection();
+        const connected = await testConnection();
+        if (!connected) {
+          throw new Error('Could not connect to database. Please check your internet connection.');
+        }
         console.log('✅ Database connection verified');
 
         const data = await db.loadAllData();
@@ -1578,7 +1581,10 @@ export default function Home() {
   const retryConnection = async () => {
     setIsRetrying(true);
     try {
-      await testConnection();
+      const connected = await testConnection();
+      if (!connected) {
+        throw new Error('Could not connect to database. Please check your internet connection.');
+      }
       const data = await db.loadAllData();
       
       // Update all state
