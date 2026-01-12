@@ -5,54 +5,54 @@ import { db, supabase } from '../lib/supabase';
 
 // ============ USERS ============
 const mockUsers = [
-  { id: 1, email: 'patrick@northstar-performance.com', username: 'Patrick', avatar: 'https://ui-avatars.com/api/?name=Patrick&background=059669&color=fff', role: 'manager', isAdmin: true, managerId: null, approvers: [] },
-  { id: 2, email: 'david@northstar-performance.com', username: 'David', avatar: 'https://ui-avatars.com/api/?name=David&background=0ea5e9&color=fff', role: 'manager', isAdmin: false, managerId: 1, approvers: [1] },
-  { id: 3, email: 'jiratchaya@northstar-performance.com', username: 'Jean', avatar: 'https://ui-avatars.com/api/?name=Jean&background=8b5cf6&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 2, approvers: [1, 2] },
-  { id: 4, email: 'jirapongthong@gmail.com', username: 'Ball', avatar: 'https://ui-avatars.com/api/?name=Ball&background=f59e0b&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 1, approvers: [1] },
+  { id: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', email: 'patrick@northstar-performance.com', username: 'Patrick', avatar: 'https://ui-avatars.com/api/?name=Patrick&background=059669&color=fff', role: 'manager', isAdmin: true, managerId: null, approvers: [] },
+  { id: '0b5466d5-4410-47e3-af90-255fdac0ab3d', email: 'david@northstar-performance.com', username: 'David', avatar: 'https://ui-avatars.com/api/?name=David&background=0ea5e9&color=fff', role: 'worker', isAdmin: false, managerId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', approvers: ['ab2ee187-4508-49c2-a5d0-3d23c0160c81'] },
+  { id: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', email: 'jiratchaya@northstar-performance.com', username: 'Jean', avatar: 'https://ui-avatars.com/api/?name=Jean&background=8b5cf6&color=fff', role: 'worker', isAdmin: false, managerId: '0b5466d5-4410-47e3-af90-255fdac0ab3d', approvers: ['ab2ee187-4508-49c2-a5d0-3d23c0160c81', '0b5466d5-4410-47e3-af90-255fdac0ab3d'] },
+  { id: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', email: 'jirapongthong@gmail.com', username: 'Ball', avatar: 'https://ui-avatars.com/api/?name=Ball&background=f59e0b&color=fff', role: 'worker', isAdmin: false, managerId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', approvers: ['ab2ee187-4508-49c2-a5d0-3d23c0160c81'] },
 ];
 
-const CONSTRUCTION_MANAGER_ID = 2; // David - confirms SC arrivals
+const CONSTRUCTION_MANAGER_ID = '0b5466d5-4410-47e3-af90-255fdac0ab3d'; // David - confirms SC arrivals
 
-const PROCUREMENT_USER_ID = 4;
+const PROCUREMENT_USER_ID = 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31';
 const TODAY = '2026-01-06';
 
 // ============ INITIAL DATA ============
 const initialKanbanTasks = [
-  { id: 'k1', title: 'Review site safety protocols', assignedTo: 3, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-04' },
-  { id: 'k2', title: 'Coordinate with architect', assignedTo: 2, column: 'thisWeek', dueDate: '2026-01-08', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-03' },
-  { id: 'k3', title: 'Order safety gear', assignedTo: 4, column: 'waiting', dueDate: '2026-01-15', expectedArrival: '2026-01-12', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-02' },
-  { id: 'k4', title: 'Weekly progress report', assignedTo: 1, column: 'thisWeek', dueDate: '2026-01-10', type: 'manual', estTime: 1.5, actualTime: null, createdAt: '2026-01-01' },
-  { id: 'k5', title: 'Daily inbox zero & emails', assignedTo: 3, column: 'today', dueDate: '2026-01-06', type: 'recurring', estTime: 1, actualTime: null, createdAt: '2026-01-06' },
-  { id: 'k6', title: 'Research concrete suppliers', assignedTo: 3, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-05' },
-  { id: 'k7', title: 'Update project timeline', assignedTo: 2, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1.5, actualTime: null, createdAt: '2026-01-05' },
-  { id: 'k8', title: 'Check material inventory', assignedTo: 4, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-05' },
-  { id: 'k9', title: 'Supplier price comparison', assignedTo: 3, column: 'review', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-04' },
-  { id: 'k10', title: 'Follow up on rebar delivery', assignedTo: 4, column: 'waiting', dueDate: '2026-01-10', expectedArrival: '2026-01-09', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-03' },
+  { id: 'k1', title: 'Review site safety protocols', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-04' },
+  { id: 'k2', title: 'Coordinate with architect', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', column: 'thisWeek', dueDate: '2026-01-08', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-03' },
+  { id: 'k3', title: 'Order safety gear', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'waiting', dueDate: '2026-01-15', expectedArrival: '2026-01-12', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-02' },
+  { id: 'k4', title: 'Weekly progress report', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', column: 'thisWeek', dueDate: '2026-01-10', type: 'manual', estTime: 1.5, actualTime: null, createdAt: '2026-01-01' },
+  { id: 'k5', title: 'Daily inbox zero & emails', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'today', dueDate: '2026-01-06', type: 'recurring', estTime: 1, actualTime: null, createdAt: '2026-01-06' },
+  { id: 'k6', title: 'Research concrete suppliers', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-05' },
+  { id: 'k7', title: 'Update project timeline', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1.5, actualTime: null, createdAt: '2026-01-05' },
+  { id: 'k8', title: 'Check material inventory', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-05' },
+  { id: 'k9', title: 'Supplier price comparison', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'review', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-04' },
+  { id: 'k10', title: 'Follow up on rebar delivery', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'waiting', dueDate: '2026-01-10', expectedArrival: '2026-01-09', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-03' },
   // Done tasks for Patrick
-  { id: 'k11', title: 'Review Q4 budget allocation', assignedTo: 1, column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 2, actualTime: 2.5, createdAt: '2026-01-01', completedAt: '2026-01-03' },
-  { id: 'k12', title: 'Sign contractor agreements', assignedTo: 1, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 1, actualTime: 1, createdAt: '2026-01-02', completedAt: '2026-01-04' },
-  { id: 'k13', title: 'Approve villa 3 foundation plan', assignedTo: 1, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1.5, actualTime: 1, createdAt: '2026-01-03', completedAt: '2026-01-05' },
+  { id: 'k11', title: 'Review Q4 budget allocation', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 2, actualTime: 2.5, createdAt: '2026-01-01', completedAt: '2026-01-03' },
+  { id: 'k12', title: 'Sign contractor agreements', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 1, actualTime: 1, createdAt: '2026-01-02', completedAt: '2026-01-04' },
+  { id: 'k13', title: 'Approve villa 3 foundation plan', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1.5, actualTime: 1, createdAt: '2026-01-03', completedAt: '2026-01-05' },
   // Done tasks for David
-  { id: 'k14', title: 'Site inspection - Villa 3', assignedTo: 2, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 2, actualTime: 2, createdAt: '2026-01-02', completedAt: '2026-01-04' },
-  { id: 'k15', title: 'Update worker schedule', assignedTo: 2, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1, actualTime: 0.5, createdAt: '2026-01-04', completedAt: '2026-01-05' },
-  { id: 'k16', title: 'QA - Base foundation formwork', assignedTo: 2, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1.5, actualTime: 1.5, createdAt: '2026-01-03', completedAt: '2026-01-05' },
+  { id: 'k14', title: 'Site inspection - Villa 3', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 2, actualTime: 2, createdAt: '2026-01-02', completedAt: '2026-01-04' },
+  { id: 'k15', title: 'Update worker schedule', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1, actualTime: 0.5, createdAt: '2026-01-04', completedAt: '2026-01-05' },
+  { id: 'k16', title: 'QA - Base foundation formwork', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1.5, actualTime: 1.5, createdAt: '2026-01-03', completedAt: '2026-01-05' },
   // Done tasks for Jean
-  { id: 'k17', title: 'Contact cement suppliers', assignedTo: 3, column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 1.5, actualTime: 2, createdAt: '2026-01-01', completedAt: '2026-01-03' },
-  { id: 'k18', title: 'Process invoice #2341', assignedTo: 3, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 0.5, actualTime: 0.5, createdAt: '2026-01-03', completedAt: '2026-01-04' },
-  { id: 'k19', title: 'Negotiate rebar pricing', assignedTo: 3, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 2, actualTime: 3, createdAt: '2026-01-02', completedAt: '2026-01-05' },
+  { id: 'k17', title: 'Contact cement suppliers', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 1.5, actualTime: 2, createdAt: '2026-01-01', completedAt: '2026-01-03' },
+  { id: 'k18', title: 'Process invoice #2341', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 0.5, actualTime: 0.5, createdAt: '2026-01-03', completedAt: '2026-01-04' },
+  { id: 'k19', title: 'Negotiate rebar pricing', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 2, actualTime: 3, createdAt: '2026-01-02', completedAt: '2026-01-05' },
   // Done tasks for Ball
-  { id: 'k20', title: 'Inventory count - tools', assignedTo: 4, column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 1, actualTime: 1.5, createdAt: '2026-01-02', completedAt: '2026-01-03' },
-  { id: 'k21', title: 'Order PPE equipment', assignedTo: 4, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 0.5, actualTime: 0.5, createdAt: '2026-01-03', completedAt: '2026-01-04' },
-  { id: 'k22', title: 'Track delivery - formwork materials', assignedTo: 4, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1, actualTime: 1, createdAt: '2026-01-04', completedAt: '2026-01-05' },
+  { id: 'k20', title: 'Inventory count - tools', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 1, actualTime: 1.5, createdAt: '2026-01-02', completedAt: '2026-01-03' },
+  { id: 'k21', title: 'Order PPE equipment', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 0.5, actualTime: 0.5, createdAt: '2026-01-03', completedAt: '2026-01-04' },
+  { id: 'k22', title: 'Track delivery - formwork materials', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1, actualTime: 1, createdAt: '2026-01-04', completedAt: '2026-01-05' },
 ];
 
 const initialRecurringTasks = [
-  { id: 'r1', title: 'Daily safety inspection', assignedTo: 3, frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
-  { id: 'r2', title: 'Weekly team standup', assignedTo: 1, frequency: 'weekly', days: ['Monday'], specificDates: [], estTime: 1, createdAt: '2026-01-01' },
-  { id: 'r3', title: 'Monthly inventory check', assignedTo: 4, frequency: 'monthly', days: ['1'], specificDates: [], estTime: 2, createdAt: '2026-01-01' },
-  { id: 'r4', title: 'Quarterly safety audit', assignedTo: 2, frequency: 'specific', days: [], specificDates: ['2026-03-01', '2026-06-01', '2026-09-01', '2026-12-01'], estTime: 4, createdAt: '2026-01-01' },
-  { id: 'r5', title: 'Daily inbox zero & emails', assignedTo: 3, frequency: 'daily', days: [], specificDates: [], estTime: 1, createdAt: '2026-01-01' },
-  { id: 'r6', title: 'Check supplier status updates', assignedTo: 4, frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
+  { id: 'r1', title: 'Daily safety inspection', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
+  { id: 'r2', title: 'Weekly team standup', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', frequency: 'weekly', days: ['Monday'], specificDates: [], estTime: 1, createdAt: '2026-01-01' },
+  { id: 'r3', title: 'Monthly inventory check', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', frequency: 'monthly', days: ['1'], specificDates: [], estTime: 2, createdAt: '2026-01-01' },
+  { id: 'r4', title: 'Quarterly safety audit', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', frequency: 'specific', days: [], specificDates: ['2026-03-01', '2026-06-01', '2026-09-01', '2026-12-01'], estTime: 4, createdAt: '2026-01-01' },
+  { id: 'r5', title: 'Daily inbox zero & emails', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', frequency: 'daily', days: [], specificDates: [], estTime: 1, createdAt: '2026-01-01' },
+  { id: 'r6', title: 'Check supplier status updates', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
 ];
 
 // Generate recurring task instances for the last 7 days
@@ -110,12 +110,12 @@ const generateRecurringTaskInstances = () => {
 const generatedRecurringTasks = generateRecurringTaskInstances();
 
 const initialComments = {
-  1: [{ id: 1, taskId: 1, userId: 4, text: 'Re-bar delivery confirmed', timestamp: '2026-01-04T09:30:00', mentions: [] }, { id: 2, taskId: 1, userId: 1, text: 'Great, crew ready by 7am', timestamp: '2026-01-04T10:15:00', mentions: [] }],
-  5: [{ id: 3, taskId: 5, userId: 2, text: 'Need concrete mix specs', timestamp: '2026-01-03T14:00:00', mentions: [] }],
-  8: [{ id: 4, taskId: 8, userId: 3, text: 'Waiting on brick supplier', timestamp: '2026-01-02T11:00:00', mentions: [] }, { id: 5, taskId: 8, userId: 4, text: '@Patrick backup supplier contact', timestamp: '2026-01-02T14:30:00', mentions: [1] }],
+  1: [{ id: 1, taskId: 1, userId: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', text: 'Re-bar delivery confirmed', timestamp: '2026-01-04T09:30:00', mentions: [] }, { id: 2, taskId: 1, userId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', text: 'Great, crew ready by 7am', timestamp: '2026-01-04T10:15:00', mentions: [] }],
+  5: [{ id: 3, taskId: 5, userId: '0b5466d5-4410-47e3-af90-255fdac0ab3d', text: 'Need concrete mix specs', timestamp: '2026-01-03T14:00:00', mentions: [] }],
+  8: [{ id: 4, taskId: 8, userId: 3, text: 'Waiting on brick supplier', timestamp: '2026-01-02T11:00:00', mentions: [] }, { id: 5, taskId: 8, userId: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', text: '@Patrick backup supplier contact', timestamp: '2026-01-02T14:30:00', mentions: [1] }],
 };
 
-const initialNotifications = [{ id: 1, userId: 1, fromUserId: 4, taskId: 8, text: 'Ball mentioned you in a comment', timestamp: '2026-01-02T14:30:00', read: false }];
+const initialNotifications = [{ id: 1, userId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', fromUserId: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', taskId: 8, text: 'Ball mentioned you in a comment', timestamp: '2026-01-02T14:30:00', read: false }];
 
 const initialBuildingTasks = [
   { id: 1, order: 1, villa: 'Villa 3', mainCategory: '2 Foundation', subCategory: 'Base Foundation (incl columns)', task: 'Re-Bar', step: 'Prefab Re-Bar', notes: '', status: 'Done', expectedArrival: '', earliestStart: '2026-01-01', skilledWorkers: ['zin'], unskilledWorkers: ['Tun Sein Maung'], duration: '' },
@@ -457,7 +457,7 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
 };
 
 const RecurringTaskModal = ({ task, onClose, onSave, onDelete, onArchive, users, comments, setComments, currentUser, setNotifications }) => {
-  const [form, setForm] = useState(task || { title: '', assignedTo: 1, frequency: 'daily', days: [], specificDates: [], estTime: 1, notes: '', status: 'active' });
+  const [form, setForm] = useState(task || { title: '', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', frequency: 'daily', days: [], specificDates: [], estTime: 1, notes: '', status: 'active' });
   const [newComment, setNewComment] = useState('');
   const toggleDay = (day) => setForm(f => ({ ...f, days: f.days.includes(day) ? f.days.filter(d => d !== day) : [...f.days, day] }));
 
@@ -1144,7 +1144,7 @@ export default function Home() {
   const [dragOverRow, setDragOverRow] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const currentUser = demoMode ? users.find(u => u.username.toLowerCase() === demoMode) || users[0] : clerkUser ? users.find(u => u.email === clerkUser.primaryEmailAddress?.emailAddress) || { id: 999, email: clerkUser.primaryEmailAddress?.emailAddress || 'unknown', username: clerkUser.firstName || 'User', avatar: clerkUser.imageUrl || 'https://ui-avatars.com/api/?name=User&background=059669&color=fff', role: 'worker', isAdmin: false, managerId: 1 } : null;
+  const currentUser = demoMode ? users.find(u => u.username.toLowerCase() === demoMode) || users[0] : clerkUser ? users.find(u => u.email === clerkUser.primaryEmailAddress?.emailAddress) || { id: 'guest-' + Date.now(), email: clerkUser.primaryEmailAddress?.emailAddress || 'unknown', username: clerkUser.firstName || 'User', avatar: clerkUser.imageUrl || 'https://ui-avatars.com/api/?name=User&background=059669&color=fff', role: 'worker', isAdmin: false, managerId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81' } : null;
 
   // Close sidebar on mobile by default
   useEffect(() => { if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false); }, []);
@@ -1345,7 +1345,7 @@ export default function Home() {
     setKanbanTasks(prev => [...prev, {
       id: 'review' + Date.now(),
       title: `Review: ${type} by ${currentUser.username}`,
-      assignedTo: 1, // Patrick
+      assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', // Patrick
       column: 'today',
       dueDate: TODAY,
       type: 'manual',
@@ -1356,7 +1356,7 @@ export default function Home() {
     }]);
     setNotifications(prev => [...prev, {
       id: Date.now(),
-      userId: 1, // Patrick
+      userId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', // Patrick
       fromUserId: currentUser.id,
       text: `${currentUser.username} proposed a change to Building Sequence`,
       timestamp: new Date().toISOString(),
