@@ -219,6 +219,8 @@ const Icon = ({ name, size = 20 }) => {
     check: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>,
     edit: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>,
     copy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>,
+    bug: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3.003 3.003 0 116 0v1" /><path d="M12 20c-3.3 0-6-2.7-6-6v-3a6 6 0 0112 0v3c0 3.3-2.7 6-6 6z" /><path d="M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M17.47 9c1.93-.2 3.53-1.9 3.53-4M18 13h4M21 21c0-2.1-1.7-3.9-3.8-4" /></svg>,
+    image: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>,
   };
   return icons[name] || null;
 };
@@ -1133,6 +1135,8 @@ export default function Home() {
   const [showArchived, setShowArchived] = useState(false);
   const [showArchivedRecurring, setShowArchivedRecurring] = useState(false);
   const [pendingChanges, setPendingChanges] = useState(() => savedData?.pendingChanges || []);
+  const [bugReports, setBugReports] = useState(() => savedData?.bugReports || []);
+  const [bugReportModal, setBugReportModal] = useState(null);
   const [pendingReviewModal, setPendingReviewModal] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
@@ -1293,7 +1297,8 @@ export default function Home() {
       options,
       workforce,
       buildingSequences,
-      pendingChanges
+      pendingChanges,
+      bugReports
     });
 
     // Debounce Supabase saves to avoid too many requests
@@ -1322,7 +1327,7 @@ export default function Home() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, buildingSequences, pendingChanges]);
+  }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, buildingSequences, pendingChanges, bugReports]);
 
   if (!isLoaded || supabaseLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}><div style={{ color: '#fff', fontSize: '18px' }}>{supabaseLoading ? '🔄 Syncing with database...' : 'Loading...'}</div>{supabaseError && <div style={{ color: '#fef3c7', fontSize: '14px' }}>⚠️ Using offline mode</div>}</div>;
   if (!isSignedIn && !demoMode) return <LoginScreen onDemoLogin={(user) => setDemoMode(user)} />;
@@ -1750,7 +1755,8 @@ export default function Home() {
     { id: 'schedule', label: 'Daily Worker Schedule', icon: 'calendar' },
     { id: 'workers', label: 'Workforce', icon: 'users' },
     { id: 'materials', label: 'Materials', icon: 'package' },
-    { id: 'reports', label: 'Reports', icon: 'chart' }
+    { id: 'reports', label: 'Reports', icon: 'chart' },
+    { id: 'bugReports', label: 'Bug/Change Requests', icon: 'bug', badge: bugReports.filter(b => !b.resolved).length || null }
   ];
 
   // Get current project/zone name for filtering
@@ -2566,6 +2572,96 @@ export default function Home() {
           })()}
         </>)}
 
+        {/* Bug/Change Reports */}
+        {activeNav === 'bugReports' && (
+          <div style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div>
+                <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Bug/Change Requests</h1>
+                <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0' }}>Report bugs or request changes</p>
+              </div>
+              <button type="button" onClick={() => setBugReportModal({ description: '', screenshot: null })} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+                <Icon name="plus" size={18} /> New Report
+              </button>
+            </div>
+
+            {/* Open Reports */}
+            <div style={{ marginBottom: '32px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>Open Reports ({bugReports.filter(b => !b.resolved).length})</h2>
+              {bugReports.filter(b => !b.resolved).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).length === 0 ? (
+                <div style={{ padding: '40px', background: '#f9fafb', borderRadius: '12px', textAlign: 'center', color: '#6b7280' }}>
+                  <Icon name="check" size={32} />
+                  <p style={{ marginTop: '8px' }}>No open bug reports</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {bugReports.filter(b => !b.resolved).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(bug => {
+                    const reporter = users.find(u => u.id === bug.reportedBy);
+                    return (
+                      <div key={bug.id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', display: 'flex', gap: '16px' }}>
+                        {bug.screenshot && (
+                          <div style={{ flexShrink: 0 }}>
+                            <img src={bug.screenshot} alt="Screenshot" style={{ width: '150px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb', cursor: 'pointer' }} onClick={() => window.open(bug.screenshot, '_blank')} />
+                          </div>
+                        )}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <img src={reporter?.avatar} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
+                              <span style={{ fontWeight: '600', fontSize: '14px' }}>{reporter?.username || 'Unknown'}</span>
+                              <span style={{ color: '#9ca3af', fontSize: '12px' }}>{new Date(bug.createdAt).toLocaleDateString()} {new Date(bug.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            {currentUser.isAdmin && (
+                              <button type="button" onClick={() => {
+                                setBugReports(prev => prev.map(b => b.id === bug.id ? { ...b, resolved: true, resolvedAt: new Date().toISOString(), resolvedBy: currentUser.id } : b));
+                                setNotifications(prev => [...prev, { id: 'n' + Date.now(), userId: bug.reportedBy, fromUserId: currentUser.id, text: 'Your bug report has been resolved', timestamp: new Date().toISOString(), read: false, bugId: bug.id }]);
+                              }} style={{ padding: '6px 12px', background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                Mark Resolved
+                              </button>
+                            )}
+                          </div>
+                          <p style={{ margin: 0, fontSize: '14px', color: '#374151', whiteSpace: 'pre-wrap' }}>{bug.description}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Resolved Reports */}
+            <div>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>Resolved ({bugReports.filter(b => b.resolved).length})</h2>
+              {bugReports.filter(b => b.resolved).sort((a, b) => new Date(b.resolvedAt) - new Date(a.resolvedAt)).length === 0 ? (
+                <div style={{ padding: '20px', background: '#f9fafb', borderRadius: '12px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                  No resolved reports yet
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {bugReports.filter(b => b.resolved).sort((a, b) => new Date(b.resolvedAt) - new Date(a.resolvedAt)).map(bug => {
+                    const reporter = users.find(u => u.id === bug.reportedBy);
+                    const resolver = users.find(u => u.id === bug.resolvedBy);
+                    return (
+                      <div key={bug.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', display: 'flex', gap: '12px', opacity: 0.8 }}>
+                        {bug.screenshot && (
+                          <img src={bug.screenshot} alt="Screenshot" style={{ width: '60px', height: '40px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bug.description}</p>
+                          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
+                            Reported by {reporter?.username} • Resolved by {resolver?.username} on {new Date(bug.resolvedAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <span style={{ padding: '4px 8px', background: '#d1fae5', color: '#059669', borderRadius: '4px', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap', height: 'fit-content' }}>✓ Resolved</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Placeholder pages */}
         {['materials', 'reports'].includes(activeNav) && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#9ca3af' }}><h2 style={{ fontSize: '24px', fontWeight: '600', color: '#6b7280' }}>{navItems.find(n => n.id === activeNav)?.label}</h2><p>Coming soon</p></div>}
       </main>
@@ -2590,6 +2686,107 @@ export default function Home() {
       {pendingReviewModal && <PendingReviewModal change={pendingReviewModal} onClose={() => setPendingReviewModal(null)} onApprove={approveChange} onReject={rejectChange} onComment={addChangeComment} users={users} buildingTasks={buildingTasks} />}
       {activeComments && <CommentsPanel taskId={activeComments} task={activeTask} comments={comments} setComments={setComments} currentUser={currentUser} users={users} onClose={() => setActiveComments(null)} setNotifications={setNotifications} />}
       {showNotifications && <NotificationsPanel notifications={notifications.filter(n => n.userId === currentUser.id)} setNotifications={setNotifications} users={users} onClose={() => setShowNotifications(false)} onGoToTask={(id) => { setActiveComments(id); setShowNotifications(false); }} />}
+      
+      {/* Bug Report Modal */}
+      {bugReportModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'auto' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>New Bug/Change Report</h2>
+              <button type="button" onClick={() => setBugReportModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><Icon name="x" size={20} /></button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Screenshot <span style={{ color: '#dc2626' }}>*</span></label>
+                <div 
+                  style={{ border: '2px dashed #d1d5db', borderRadius: '8px', padding: '24px', textAlign: 'center', cursor: 'pointer', background: bugReportModal.screenshot ? '#f9fafb' : '#fff' }}
+                  onPaste={(e) => {
+                    const items = e.clipboardData?.items;
+                    for (let i = 0; i < items?.length; i++) {
+                      if (items[i].type.indexOf('image') !== -1) {
+                        const blob = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (event) => setBugReportModal(prev => ({ ...prev, screenshot: event.target.result }));
+                        reader.readAsDataURL(blob);
+                        break;
+                      }
+                    }
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => setBugReportModal(prev => ({ ...prev, screenshot: event.target.result }));
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  tabIndex={0}
+                >
+                  {bugReportModal.screenshot ? (
+                    <div style={{ position: 'relative' }}>
+                      <img src={bugReportModal.screenshot} alt="Screenshot" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }} />
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setBugReportModal(prev => ({ ...prev, screenshot: null })); }} style={{ position: 'absolute', top: '8px', right: '8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={14} /></button>
+                    </div>
+                  ) : (
+                    <>
+                      <Icon name="image" size={32} />
+                      <p style={{ margin: '8px 0 0', color: '#6b7280', fontSize: '14px' }}>Paste screenshot (Ctrl+V), drag & drop, or</p>
+                      <label style={{ display: 'inline-block', marginTop: '8px', padding: '8px 16px', background: '#f3f4f6', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+                        Choose file
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => setBugReportModal(prev => ({ ...prev, screenshot: event.target.result }));
+                            reader.readAsDataURL(file);
+                          }
+                        }} />
+                      </label>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Description <span style={{ color: '#dc2626' }}>*</span></label>
+                <textarea
+                  value={bugReportModal.description}
+                  onChange={(e) => setBugReportModal(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe the bug or change request..."
+                  style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', minHeight: '120px', resize: 'vertical', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button type="button" onClick={() => setBugReportModal(null)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>Cancel</button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    if (!bugReportModal.screenshot || !bugReportModal.description.trim()) {
+                      alert('Please add both a screenshot and description');
+                      return;
+                    }
+                    const newReport = {
+                      id: 'bug' + Date.now(),
+                      description: bugReportModal.description.trim(),
+                      screenshot: bugReportModal.screenshot,
+                      reportedBy: currentUser.id,
+                      createdAt: new Date().toISOString(),
+                      resolved: false
+                    };
+                    setBugReports(prev => [...prev, newReport]);
+                    setBugReportModal(null);
+                  }}
+                  disabled={!bugReportModal.screenshot || !bugReportModal.description.trim()}
+                  style={{ flex: 1, padding: '12px', background: (!bugReportModal.screenshot || !bugReportModal.description.trim()) ? '#d1d5db' : '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: (!bugReportModal.screenshot || !bugReportModal.description.trim()) ? 'not-allowed' : 'pointer', fontWeight: '600' }}
+                >
+                  Submit Report
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
