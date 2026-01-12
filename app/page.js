@@ -1128,28 +1128,7 @@ const PendingField = ({ pending, displayValue, oldValue, onApprove, onReject, is
 const MultiSelect = ({ values = [], options, onChange, placeholder }) => { const [open, setOpen] = useState(false); const ref = useRef(null); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); const toggle = (opt) => onChange(values.includes(opt) ? values.filter(v => v !== opt) : [...values, opt]); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ width: '100%', padding: '6px 10px', fontSize: '12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', textAlign: 'left', cursor: 'pointer', color: values.length ? '#1f2937' : '#9ca3af', minHeight: '32px' }}>{values.length ? values.join(', ') : placeholder}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '200px', overflowY: 'auto' }}><div onClick={() => onChange([])} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #e5e7eb', color: '#dc2626', fontSize: '12px' }}>Clear all</div>{options.map((o, i) => <div key={i} onClick={() => toggle(o)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer', background: values.includes(o) ? '#ecfdf5' : 'transparent' }}><span style={{ width: '16px', height: '16px', border: values.includes(o) ? '2px solid #059669' : '1px solid #d1d5db', borderRadius: '4px', background: values.includes(o) ? '#059669' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px' }}>{values.includes(o) && '✓'}</span>{o}</div>)}</div>}</div>); };
 
 // ============ MAIN APP ============
-// LocalStorage helpers (fallback when Supabase not available)
-const STORAGE_KEY = 'santi_management_backup'; // Only for emergency backup
-
-// Emergency backup to localStorage (only used for "Copy to Clipboard" feature)
-const saveEmergencyBackup = (data) => {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, backupTime: new Date().toISOString() }));
-  } catch (e) {
-    console.error('Error saving emergency backup:', e);
-  }
-};
-
-const getEmergencyBackup = () => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : null;
-  } catch (e) {
-    return null;
-  }
-};
+// NO LOCALSTORAGE - Everything is saved to Supabase only
 
 // ============ SYNC STATUS INDICATOR ============
 const SyncStatusIndicator = ({ status, lastSaved, onRetry }) => {
@@ -1527,7 +1506,7 @@ export default function Home() {
 
         const data = await db.loadAllData();
         
-        // Update state with data from Supabase
+        // Load ALL data from Supabase - no localStorage fallback
         if (data.buildingTasks && data.buildingTasks.length > 0) {
           setBuildingTasks(data.buildingTasks);
         }
@@ -1548,6 +1527,15 @@ export default function Home() {
         }
         if (data.buildingSequences && data.buildingSequences.standalone) {
           setBuildingSequences(data.buildingSequences);
+          console.log('✅ Loaded buildingSequences from Supabase');
+        }
+        if (data.pendingChanges && data.pendingChanges.length > 0) {
+          setPendingChanges(data.pendingChanges);
+          console.log(`✅ Loaded ${data.pendingChanges.length} pending changes from Supabase`);
+        }
+        if (data.bugReports && data.bugReports.length > 0) {
+          setBugReports(data.bugReports);
+          console.log(`✅ Loaded ${data.bugReports.length} bug reports from Supabase`);
         }
 
         // Load profiles and merge with mockUsers
@@ -1639,19 +1627,6 @@ export default function Home() {
     // Don't save if we haven't loaded yet or if initial load failed
     if (!dataLoaded || initialLoadFailed) return;
 
-    // Also save emergency backup to localStorage (for Copy to Clipboard feature)
-    saveEmergencyBackup({
-      buildingTasks,
-      kanbanTasks,
-      recurringTasks,
-      comments,
-      workforce,
-      options,
-      buildingSequences,
-      pendingChanges,
-      bugReports
-    });
-
     // Debounce Supabase saves
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -1661,13 +1636,16 @@ export default function Home() {
 
     saveTimeoutRef.current = setTimeout(async () => {
       try {
+        // Save EVERYTHING to Supabase - no localStorage
         await db.saveAllData({
           buildingTasks,
           kanbanTasks,
           recurringTasks,
           workforce,
           options,
-          buildingSequences
+          buildingSequences,
+          pendingChanges,
+          bugReports
         });
         console.log('💾 Saved to Supabase');
         setSyncStatus('saved');
