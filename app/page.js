@@ -179,12 +179,23 @@ const getReadiness = (task, categoryTasks, index) => {
     if (predStatus.includes('Supply Chain Pending')) return { type: 'blocked-upstream', label: 'Upstream Blocked', color: '#f97316', bg: '#fff7ed', icon: '↑' };
     return { type: 'sequenced', label: '', color: '#9ca3af', bg: 'transparent', icon: '' };
   }
-  if (status === 'Ready to start (Supply Chain confirmed on-site)') return { type: 'ready', label: 'Ready Now', color: '#16a34a', bg: '#f0fdf4', icon: '●' };
+  // Handle both new and legacy ready statuses
+  if (status === 'Ready to start (Supply Chain confirmed on-site)' || status === 'Ready') return { type: 'ready', label: 'Ready Now', color: '#16a34a', bg: '#f0fdf4', icon: '●' };
   return { type: 'sequenced', label: '', color: '#9ca3af', bg: 'transparent', icon: '' };
 };
 
 const getStatusStyle = (status) => {
-  const styles = { 'Done': { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', dot: '#16a34a' }, 'In Progress': { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', dot: '#7c3aed' }, 'Ready to start (Supply Chain confirmed on-site)': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' }, 'Supply Chain Arrived to be Confirmed': { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', dot: '#0ea5e9' }, 'Supply Chain Pending Order': { bg: 'rgba(220,38,38,0.1)', color: '#dc2626', dot: '#dc2626' }, 'Supply Chain Pending Arrival': { bg: 'rgba(217,119,6,0.1)', color: '#d97706', dot: '#d97706' }, 'Blocked': { bg: 'rgba(107,114,128,0.1)', color: '#6b7280', dot: '#6b7280' }, 'On Hold': { bg: 'rgba(156,163,175,0.1)', color: '#9ca3af', dot: '#9ca3af' } };
+  const styles = { 
+    'Done': { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', dot: '#16a34a' }, 
+    'In Progress': { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', dot: '#7c3aed' }, 
+    'Ready to start (Supply Chain confirmed on-site)': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' }, 
+    'Ready': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' }, // Legacy support
+    'Supply Chain Arrived to be Confirmed': { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', dot: '#0ea5e9' }, 
+    'Supply Chain Pending Order': { bg: 'rgba(220,38,38,0.1)', color: '#dc2626', dot: '#dc2626' }, 
+    'Supply Chain Pending Arrival': { bg: 'rgba(217,119,6,0.1)', color: '#d97706', dot: '#d97706' }, 
+    'Blocked': { bg: 'rgba(107,114,128,0.1)', color: '#6b7280', dot: '#6b7280' }, 
+    'On Hold': { bg: 'rgba(156,163,175,0.1)', color: '#9ca3af', dot: '#9ca3af' } 
+  };
   return styles[status] || { bg: '#f3f4f6', color: '#6b7280', dot: '#9ca3af' };
 };
 
@@ -1741,9 +1752,12 @@ export default function Home() {
       ...sourceTask,
       id: Date.now(),
       order: maxOrder + 1,
-      step: sourceTask.step, // Keep same step name (no copy suffix)
-      task: sourceTask.task ? '(copy) ' + sourceTask.task : '', // Add (copy) prefix only if task has content
+      // Keep step and task exactly the same - no "(copy)" suffix
+      step: sourceTask.step,
+      task: sourceTask.task,
+      // Always reset to Supply Chain Pending Order
       status: 'Supply Chain Pending Order',
+      // Clear dates so user must set them
       expectedArrival: '',
       earliestStart: ''
     };
