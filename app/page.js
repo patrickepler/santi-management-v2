@@ -1137,6 +1137,28 @@ export default function Home() {
   const [pendingChanges, setPendingChanges] = useState(() => savedData?.pendingChanges || []);
   const [bugReports, setBugReports] = useState(() => savedData?.bugReports || []);
   const [bugReportModal, setBugReportModal] = useState(null);
+  
+  // Global paste handler for bug report modal
+  useEffect(() => {
+    if (!bugReportModal) return;
+    const handlePaste = (e) => {
+      if (bugReportModal.screenshot) return; // Already has screenshot
+      const items = e.clipboardData?.items;
+      for (let i = 0; i < items?.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const blob = items[i].getAsFile();
+          const reader = new FileReader();
+          reader.onload = (event) => setBugReportModal(prev => prev ? { ...prev, screenshot: event.target.result } : null);
+          reader.readAsDataURL(blob);
+          e.preventDefault();
+          break;
+        }
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [bugReportModal]);
+  
   const [pendingReviewModal, setPendingReviewModal] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
@@ -2700,18 +2722,6 @@ export default function Home() {
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Screenshot <span style={{ color: '#dc2626' }}>*</span></label>
                 <div 
                   style={{ border: '2px dashed #d1d5db', borderRadius: '8px', padding: '24px', textAlign: 'center', cursor: 'pointer', background: bugReportModal.screenshot ? '#f9fafb' : '#fff' }}
-                  onPaste={(e) => {
-                    const items = e.clipboardData?.items;
-                    for (let i = 0; i < items?.length; i++) {
-                      if (items[i].type.indexOf('image') !== -1) {
-                        const blob = items[i].getAsFile();
-                        const reader = new FileReader();
-                        reader.onload = (event) => setBugReportModal(prev => ({ ...prev, screenshot: event.target.result }));
-                        reader.readAsDataURL(blob);
-                        break;
-                      }
-                    }
-                  }}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -2722,7 +2732,6 @@ export default function Home() {
                       reader.readAsDataURL(file);
                     }
                   }}
-                  tabIndex={0}
                 >
                   {bugReportModal.screenshot ? (
                     <div style={{ position: 'relative' }}>
@@ -2732,7 +2741,7 @@ export default function Home() {
                   ) : (
                     <>
                       <Icon name="image" size={32} />
-                      <p style={{ margin: '8px 0 0', color: '#6b7280', fontSize: '14px' }}>Paste screenshot (Ctrl+V), drag & drop, or</p>
+                      <p style={{ margin: '8px 0 0', color: '#6b7280', fontSize: '14px' }}>Press Ctrl+V to paste screenshot, drag & drop, or</p>
                       <label style={{ display: 'inline-block', marginTop: '8px', padding: '8px 16px', background: '#f3f4f6', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
                         Choose file
                         <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
@@ -2755,6 +2764,7 @@ export default function Home() {
                   onChange={(e) => setBugReportModal(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Describe the bug or change request..."
                   style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', minHeight: '120px', resize: 'vertical', boxSizing: 'border-box' }}
+                  autoFocus
                 />
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
