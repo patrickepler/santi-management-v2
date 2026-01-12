@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useUser, SignIn, SignOutButton } from '@clerk/nextjs';
-import { db, supabase } from '../lib/supabase';
+import { db, supabase, testConnection } from '../lib/supabase';
 
 // ============ USERS ============
 const mockUsers = [
@@ -1122,26 +1122,230 @@ const MultiSelect = ({ values = [], options, onChange, placeholder }) => { const
 
 // ============ MAIN APP ============
 // LocalStorage helpers (fallback when Supabase not available)
-const STORAGE_KEY = 'santi_management_data';
+const STORAGE_KEY = 'santi_management_backup'; // Only for emergency backup
 
-const loadFromStorage = () => {
+// Emergency backup to localStorage (only used for "Copy to Clipboard" feature)
+const saveEmergencyBackup = (data) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, backupTime: new Date().toISOString() }));
+  } catch (e) {
+    console.error('Error saving emergency backup:', e);
+  }
+};
+
+const getEmergencyBackup = () => {
   if (typeof window === 'undefined') return null;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : null;
   } catch (e) {
-    console.error('Error loading from localStorage:', e);
     return null;
   }
 };
 
-const saveToStorage = (data) => {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.error('Error saving to localStorage:', e);
-  }
+// ============ SYNC STATUS INDICATOR ============
+const SyncStatusIndicator = ({ status, lastSaved, onRetry }) => {
+  const getStatusDisplay = () => {
+    switch (status) {
+      case 'saved':
+        return { icon: '☁️', text: 'Saved', color: '#059669', bg: 'rgba(5,150,105,0.1)' };
+      case 'saving':
+        return { icon: '🔄', text: 'Saving...', color: '#d97706', bg: 'rgba(217,119,6,0.1)' };
+      case 'error':
+        return { icon: '⚠️', text: 'NOT SAVED!', color: '#dc2626', bg: 'rgba(220,38,38,0.1)' };
+      case 'checking':
+        return { icon: '🔄', text: 'Connecting...', color: '#6b7280', bg: 'rgba(107,114,128,0.1)' };
+      default:
+        return { icon: '☁️', text: 'Synced', color: '#059669', bg: 'rgba(5,150,105,0.1)' };
+    }
+  };
+  
+  const display = getStatusDisplay();
+  
+  return (
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '6px', 
+      padding: '4px 10px', 
+      background: display.bg, 
+      borderRadius: '6px',
+      fontSize: '12px',
+      fontWeight: '500',
+      color: display.color,
+      cursor: status === 'error' ? 'pointer' : 'default'
+    }} onClick={status === 'error' ? onRetry : undefined} title={status === 'error' ? 'Click to retry' : lastSaved ? `Last saved: ${new Date(lastSaved).toLocaleTimeString()}` : ''}>
+      <span>{display.icon}</span>
+      <span>{display.text}</span>
+    </div>
+  );
+};
+
+// ============ BLOCKING OVERLAY (when save fails) ============
+const ConnectionBlockingOverlay = ({ error, onRetry, onCopyBackup, isRetrying }) => {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.85)',
+      zIndex: 99999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'column',
+      padding: '20px'
+    }}>
+      <div style={{
+        background: '#fff',
+        borderRadius: '16px',
+        padding: '40px',
+        maxWidth: '500px',
+        width: '100%',
+        textAlign: 'center',
+        boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
+      }}>
+        <div style={{ fontSize: '64px', marginBottom: '20px' }}>⚠️</div>
+        <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#dc2626', marginBottom: '12px' }}>
+          Connection Lost
+        </h2>
+        <p style={{ fontSize: '16px', color: '#4b5563', marginBottom: '8px' }}>
+          Your work is <strong>NOT being saved</strong> to the database!
+        </p>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
+          Do not continue working until the connection is restored.
+        </p>
+        
+        {error && (
+          <div style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '24px',
+            fontSize: '13px',
+            color: '#991b1b',
+            textAlign: 'left'
+          }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+        
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={onRetry}
+            disabled={isRetrying}
+            style={{
+              padding: '12px 24px',
+              background: isRetrying ? '#9ca3af' : '#059669',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: isRetrying ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            {isRetrying ? '🔄 Retrying...' : '🔄 Retry Connection'}
+          </button>
+          
+          <button
+            onClick={onCopyBackup}
+            style={{
+              padding: '12px 24px',
+              background: '#f3f4f6',
+              color: '#374151',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            📋 Copy Data Backup
+          </button>
+        </div>
+        
+        <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '20px' }}>
+          If this persists, contact support or check your internet connection.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ============ INITIAL CONNECTION FAILED SCREEN ============
+const ConnectionFailedScreen = ({ error, onRetry, isRetrying }) => {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'column',
+      background: 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%)',
+      padding: '20px'
+    }}>
+      <div style={{
+        background: '#fff',
+        borderRadius: '16px',
+        padding: '40px',
+        maxWidth: '500px',
+        width: '100%',
+        textAlign: 'center',
+        boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
+      }}>
+        <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔌</div>
+        <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#dc2626', marginBottom: '12px' }}>
+          Cannot Connect to Database
+        </h2>
+        <p style={{ fontSize: '16px', color: '#4b5563', marginBottom: '24px' }}>
+          Unable to establish a connection to the database. Please check your internet connection and try again.
+        </p>
+        
+        {error && (
+          <div style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '24px',
+            fontSize: '13px',
+            color: '#991b1b',
+            textAlign: 'left'
+          }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+        
+        <button
+          onClick={onRetry}
+          disabled={isRetrying}
+          style={{
+            padding: '14px 32px',
+            background: isRetrying ? '#9ca3af' : '#059669',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: isRetrying ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {isRetrying ? '🔄 Connecting...' : '🔄 Retry Connection'}
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default function Home() {
@@ -1149,21 +1353,25 @@ export default function Home() {
   const [users, setUsers] = useState(mockUsers);
   const [demoMode, setDemoMode] = useState(null); // null, 'patrick', or 'david'
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [supabaseLoading, setSupabaseLoading] = useState(true);
-  const [supabaseError, setSupabaseError] = useState(null);
+  
+  // Sync status: 'checking' | 'connected' | 'saving' | 'saved' | 'error'
+  const [syncStatus, setSyncStatus] = useState('checking');
+  const [syncError, setSyncError] = useState(null);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [initialLoadFailed, setInitialLoadFailed] = useState(false);
+  
   const saveTimeoutRef = useRef(null);
 
-  // Load saved data from localStorage initially (will be overwritten by Supabase if available)
-  const [savedData] = useState(() => loadFromStorage());
-
-  const [buildingTasks, setBuildingTasks] = useState(() => savedData?.buildingTasks || initialBuildingTasks);
-  const [kanbanTasks, setKanbanTasks] = useState(() => savedData?.kanbanTasks || [...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
-  const [recurringTasks, setRecurringTasks] = useState(() => savedData?.recurringTasks || initialRecurringTasks);
-  const [comments, setComments] = useState(() => savedData?.comments || initialComments);
-  const [notifications, setNotifications] = useState(() => savedData?.notifications || initialNotifications);
-  const [options, setOptions] = useState(() => savedData?.options || initialOptions);
-  const [workforce, setWorkforce] = useState(() => savedData?.workforce || initialWorkforce);
-  const [buildingSequences, setBuildingSequences] = useState(() => savedData?.buildingSequences || {
+  // State starts with initial values, will be populated from Supabase
+  const [buildingTasks, setBuildingTasks] = useState(initialBuildingTasks);
+  const [kanbanTasks, setKanbanTasks] = useState([...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
+  const [recurringTasks, setRecurringTasks] = useState(initialRecurringTasks);
+  const [comments, setComments] = useState(initialComments);
+  const [notifications, setNotifications] = useState(initialNotifications);
+  const [options, setOptions] = useState(initialOptions);
+  const [workforce, setWorkforce] = useState(initialWorkforce);
+  const [buildingSequences, setBuildingSequences] = useState({
     standalone: [
       { id: 'villa3', label: 'Villa 3', starred: true, archived: false },
       { id: 'villa2', label: 'Villa 2', starred: false, archived: false },
@@ -1196,8 +1404,8 @@ export default function Home() {
   const [editPhaseModal, setEditPhaseModal] = useState(null); // { subCat, mainCat, villa }
   const [showArchived, setShowArchived] = useState(false);
   const [showArchivedRecurring, setShowArchivedRecurring] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState(() => savedData?.pendingChanges || []);
-  const [bugReports, setBugReports] = useState(() => savedData?.bugReports || []);
+  const [pendingChanges, setPendingChanges] = useState([]);
+  const [bugReports, setBugReports] = useState([]);
   const [bugReportModal, setBugReportModal] = useState(null);
   
   // Global paste handler for bug report modal
@@ -1296,20 +1504,20 @@ export default function Home() {
     syncClerkUser();
   }, [isSignedIn, clerkUser, demoMode]);
 
-  // Load data from Supabase on mount
+  // Load data from Supabase on mount - BLOCKS if connection fails
   useEffect(() => {
     const loadFromSupabase = async () => {
       try {
-        setSupabaseLoading(true);
-        setSupabaseError(null);
+        setSyncStatus('checking');
+        setSyncError(null);
+        
+        // First test connection
+        await testConnection();
+        console.log('✅ Database connection verified');
 
         const data = await db.loadAllData();
         
-        // Preserve pendingChanges from localStorage (not stored in Supabase)
-        const localData = loadFromStorage();
-        const localPendingChanges = localData?.pendingChanges || [];
-
-        // Only update state if we got data back
+        // Update state with data from Supabase
         if (data.buildingTasks && data.buildingTasks.length > 0) {
           setBuildingTasks(data.buildingTasks);
         }
@@ -1331,16 +1539,11 @@ export default function Home() {
         if (data.buildingSequences && data.buildingSequences.standalone) {
           setBuildingSequences(data.buildingSequences);
         }
-        
-        // Restore pendingChanges from localStorage (always preserve this)
-        if (localPendingChanges.length > 0) {
-          setPendingChanges(localPendingChanges);
-        }
 
-        // Load profiles and merge with mockUsers (keep mockUsers as fallback for numeric IDs)
+        // Load profiles and merge with mockUsers
         if (data.profiles && data.profiles.length > 0) {
           const supabaseUsers = data.profiles.map(p => ({
-            id: p.id, // UUID from Supabase
+            id: p.id,
             email: p.email,
             username: p.username,
             avatar: p.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.username)}&background=059669&color=fff`,
@@ -1348,49 +1551,100 @@ export default function Home() {
             isAdmin: p.role === 'manager',
             managerId: p.managerId,
           }));
-          // Merge: mockUsers as base, append real users from Supabase
           const existingEmails = mockUsers.map(u => u.email);
           const newUsers = supabaseUsers.filter(u => !existingEmails.includes(u.email));
           setUsers([...mockUsers, ...newUsers]);
           console.log(`✅ Loaded ${supabaseUsers.length} profiles from Supabase`);
         }
 
-        console.log('✅ Loaded data from Supabase');
-        console.log(`📋 Preserved ${localPendingChanges.length} pending changes from localStorage`);
+        console.log('✅ Loaded all data from Supabase');
+        setSyncStatus('saved');
+        setLastSaved(new Date().toISOString());
         setDataLoaded(true);
+        setInitialLoadFailed(false);
       } catch (err) {
         console.error('❌ Error loading from Supabase:', err);
-        setSupabaseError(err.message);
-        // Fall back to localStorage data (already loaded)
-        console.log('📦 Using localStorage fallback');
-      } finally {
-        setSupabaseLoading(false);
+        setSyncError(err.message);
+        setSyncStatus('error');
+        setInitialLoadFailed(true);
+        // DO NOT fall back to localStorage - block the app
       }
     };
 
     loadFromSupabase();
   }, []);
 
-  // Save data to Supabase (debounced) and localStorage whenever key state changes
-  useEffect(() => {
-    // Always save to localStorage immediately
-    saveToStorage({
+  // Retry connection function
+  const retryConnection = async () => {
+    setIsRetrying(true);
+    try {
+      await testConnection();
+      const data = await db.loadAllData();
+      
+      // Update all state
+      if (data.buildingTasks) setBuildingTasks(data.buildingTasks);
+      if (data.kanbanTasks) setKanbanTasks(data.kanbanTasks);
+      if (data.recurringTasks) setRecurringTasks(data.recurringTasks);
+      if (data.comments) setComments(data.comments);
+      if (data.workforce) setWorkforce(data.workforce);
+      if (data.options) setOptions(data.options);
+      if (data.buildingSequences?.standalone) setBuildingSequences(data.buildingSequences);
+      
+      setSyncStatus('saved');
+      setSyncError(null);
+      setLastSaved(new Date().toISOString());
+      setDataLoaded(true);
+      setInitialLoadFailed(false);
+    } catch (err) {
+      setSyncError(err.message);
+      setSyncStatus('error');
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  // Copy data backup to clipboard
+  const copyDataBackup = () => {
+    const backup = {
       buildingTasks,
       kanbanTasks,
       recurringTasks,
       comments,
-      notifications,
-      options,
       workforce,
+      options,
+      buildingSequences,
+      pendingChanges,
+      bugReports,
+      backupTime: new Date().toISOString()
+    };
+    navigator.clipboard.writeText(JSON.stringify(backup, null, 2));
+    alert('✅ Data backup copied to clipboard! Paste it somewhere safe.');
+  };
+
+  // Save data to Supabase (debounced) - shows error overlay on failure
+  useEffect(() => {
+    // Don't save if we haven't loaded yet or if initial load failed
+    if (!dataLoaded || initialLoadFailed) return;
+
+    // Also save emergency backup to localStorage (for Copy to Clipboard feature)
+    saveEmergencyBackup({
+      buildingTasks,
+      kanbanTasks,
+      recurringTasks,
+      comments,
+      workforce,
+      options,
       buildingSequences,
       pendingChanges,
       bugReports
     });
 
-    // Debounce Supabase saves to avoid too many requests
+    // Debounce Supabase saves
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
+
+    setSyncStatus('saving');
 
     saveTimeoutRef.current = setTimeout(async () => {
       try {
@@ -1403,19 +1657,38 @@ export default function Home() {
           buildingSequences
         });
         console.log('💾 Saved to Supabase');
+        setSyncStatus('saved');
+        setSyncError(null);
+        setLastSaved(new Date().toISOString());
       } catch (err) {
         console.error('❌ Error saving to Supabase:', err);
+        setSyncStatus('error');
+        setSyncError(err.message);
+        // This will trigger the blocking overlay
       }
-    }, 2000); // Wait 2 seconds after last change before saving
+    }, 2000);
 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, buildingSequences, pendingChanges, bugReports]);
+  }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, buildingSequences, pendingChanges, bugReports, dataLoaded, initialLoadFailed]);
 
-  if (!isLoaded || supabaseLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}><div style={{ color: '#fff', fontSize: '18px' }}>{supabaseLoading ? '🔄 Syncing with database...' : 'Loading...'}</div>{supabaseError && <div style={{ color: '#fef3c7', fontSize: '14px' }}>⚠️ Using offline mode</div>}</div>;
+  // Show connection failed screen if initial load failed
+  if (initialLoadFailed) {
+    return <ConnectionFailedScreen error={syncError} onRetry={retryConnection} isRetrying={isRetrying} />;
+  }
+
+  // Show loading screen while checking connection
+  if (!isLoaded || syncStatus === 'checking') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}>
+        <div style={{ color: '#fff', fontSize: '18px' }}>🔄 Connecting to database...</div>
+      </div>
+    );
+  }
+
   if (!isSignedIn && !demoMode) return <LoginScreen onDemoLogin={(user) => setDemoMode(user)} />;
 
   const isManager = currentUser.role === 'manager';
@@ -1995,10 +2268,21 @@ export default function Home() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f3f4f6' }}>
+      {/* Blocking Overlay - shown when save fails */}
+      {syncStatus === 'error' && dataLoaded && (
+        <ConnectionBlockingOverlay 
+          error={syncError} 
+          onRetry={retryConnection} 
+          onCopyBackup={copyDataBackup}
+          isRetrying={isRetrying}
+        />
+      )}
+      
       {/* Mobile Header */}
       <div style={{ display: sidebarOpen ? 'none' : 'flex', position: 'fixed', top: 0, left: 0, right: 0, height: '60px', background: '#fff', borderBottom: '1px solid #e5e7eb', alignItems: 'center', padding: '0 16px', zIndex: 900, gap: '12px' }}>
         <button type="button" onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }}><Icon name="menu" size={24} /></button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #065f46, #10b981)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Icon name="leaf" size={16} /></div><span style={{ fontWeight: '600', fontSize: '15px' }}>Santi</span></div>
+        <div style={{ marginLeft: 'auto' }}><SyncStatusIndicator status={syncStatus} lastSaved={lastSaved} onRetry={retryConnection} /></div>
       </div>
 
       {/* Sidebar Overlay */}
@@ -2009,6 +2293,10 @@ export default function Home() {
         <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #065f46, #10b981)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Icon name="leaf" size={20} /></div><div><div style={{ fontSize: '15px', fontWeight: '700', color: '#1f2937' }}>Santi</div><div style={{ fontSize: '11px', color: '#6b7280' }}>Sustainable Dev</div></div></div>
           <button type="button" onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}><Icon name="x" size={20} /></button>
+        </div>
+        {/* Sync Status Banner in Sidebar */}
+        <div style={{ padding: '8px 16px', borderBottom: '1px solid #e5e7eb' }}>
+          <SyncStatusIndicator status={syncStatus} lastSaved={lastSaved} onRetry={retryConnection} />
         </div>
         <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#f9fafb', borderRadius: '10px' }}><img src={currentUser.avatar} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: '13px', fontWeight: '600' }}>{currentUser.username}</div><div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'capitalize' }}>{currentUser.role}</div></div><button type="button" onClick={() => setShowNotifications(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', position: 'relative', padding: '4px' }}><Icon name="bell" size={18} />{unreadCount > 0 && <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '16px', height: '16px', background: '#dc2626', color: '#fff', borderRadius: '50%', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>{unreadCount}</span>}</button>{demoMode ? <button type="button" onClick={() => setDemoMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button> : <SignOutButton><button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button></SignOutButton>}</div></div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>{navItems.map(item => (<div key={item.id}>
