@@ -2657,6 +2657,8 @@ export default function Home() {
           {(() => {
             const myPending = pendingChanges.filter(c => c.requestedBy === currentUser.id && c.status === 'pending');
             const myHistory = pendingChanges.filter(c => c.requestedBy === currentUser.id && c.status !== 'pending');
+            const myFieldEdits = myPending.filter(c => c.type === 'field_edit');
+            const mySequenceChanges = myPending.filter(c => c.type !== 'field_edit');
 
             return (
               <>
@@ -2669,43 +2671,77 @@ export default function Home() {
                   </div>
                 ) : (
                   <div style={{ marginBottom: '32px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#f59e0b', marginBottom: '16px' }}>⏳ Awaiting Approval ({myPending.length})</h3>
-                    <div style={{ display: 'grid', gap: '12px' }}>
-                      {myPending.map(change => (
-                        <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid #fef3c7', padding: '16px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                            <div>
-                              <span style={{ fontSize: '11px', padding: '3px 8px', background: '#fef3c7', color: '#d97706', borderRadius: '4px', fontWeight: '600', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>{formatTime(change.timestamp)}</div>
-                          </div>
-
-                          <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                            {change.type === 'edit' && `Change ${change.field}: "${change.oldValue || '(empty)'}" → "${change.newValue}"`}
-                            {change.type === 'add_step' && `Add new step: "${change.newTask?.step}"`}
-                            {change.type === 'add_phase' && `Add new phase: ${change.subCategory}`}
-                            {change.type === 'delete' && `Delete step: "${change.step}"`}
-                            {change.type === 'add_sequence' && `Add new building sequence: "${change.sequenceLabel}"`}
-                          </div>
-
-                          {change.villa && <div style={{ fontSize: '12px', color: '#6b7280' }}>📍 {change.villa} → {change.subCategory}</div>}
-
-                          {change.comments?.length > 0 && (
-                            <div style={{ marginTop: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
-                              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '6px' }}>Comments:</div>
-                              {change.comments.map((c, i) => {
-                                const commenter = users.find(u => u.id === c.userId);
-                                return (
-                                  <div key={i} style={{ fontSize: '12px', marginBottom: '4px' }}>
-                                    <span style={{ fontWeight: '500' }}>{commenter?.username}:</span> {c.text}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                    <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#6b7280', marginBottom: '16px' }}>⏳ Awaiting Approval ({myPending.length})</h3>
+                    
+                    {/* Field Edits - Purple */}
+                    {myFieldEdits.length > 0 && (
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#9333ea', marginBottom: '10px' }}>📝 Field Updates ({myFieldEdits.length})</div>
+                        <div style={{ display: 'grid', gap: '10px' }}>
+                          {myFieldEdits.map(change => {
+                            const fieldLabels = { earliestStart: 'Earliest Start', duration: 'Est. Duration', skilledWorkers: 'Skilled Workers', unskilledWorkers: 'Unskilled Workers', status: 'Status', step: 'Step', task: 'Task', notes: 'Notes', expectedArrival: 'Expected Arrival' };
+                            const formatVal = (v) => Array.isArray(v) ? (v.length ? v.join(', ') : 'None') : (v || '(empty)');
+                            return (
+                              <div key={change.id} style={{ background: '#fff', borderRadius: '10px', border: '2px solid rgba(147,51,234,0.3)', padding: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                  <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(147,51,234,0.1)', color: '#9333ea', borderRadius: '4px', fontWeight: '600' }}>{fieldLabels[change.field] || change.field}</span>
+                                  <div style={{ fontSize: '11px', color: '#9ca3af' }}>{formatTime(change.timestamp)}</div>
+                                </div>
+                                <div style={{ fontSize: '13px', marginBottom: '6px' }}>
+                                  <span style={{ color: '#6b7280' }}>{formatVal(change.oldValue)}</span>
+                                  <span style={{ margin: '0 6px', color: '#9333ea' }}>→</span>
+                                  <span style={{ fontWeight: '500', color: '#1f2937' }}>{formatVal(change.newValue)}</span>
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#6b7280' }}>📍 {change.villa} → {change.subCategory}</div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* Sequence Changes - Yellow */}
+                    {mySequenceChanges.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#d97706', marginBottom: '10px' }}>⚡ Sequence Changes ({mySequenceChanges.length})</div>
+                        <div style={{ display: 'grid', gap: '12px' }}>
+                          {mySequenceChanges.map(change => (
+                            <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid #fef3c7', padding: '16px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                <div>
+                                  <span style={{ fontSize: '11px', padding: '3px 8px', background: '#fef3c7', color: '#d97706', borderRadius: '4px', fontWeight: '600', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>{formatTime(change.timestamp)}</div>
+                              </div>
+
+                              <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                                {change.type === 'edit' && `Change ${change.field}: "${change.oldValue || '(empty)'}" → "${change.newValue}"`}
+                                {change.type === 'add_step' && `Add new step: "${change.newTask?.step || '(no step name)'}"`}
+                                {change.type === 'add_phase' && `Add new phase: ${change.subCategory}`}
+                                {change.type === 'delete' && `Delete step: "${change.step}"`}
+                                {change.type === 'add_sequence' && `Add new building sequence: "${change.sequenceLabel}"`}
+                              </div>
+
+                              {change.villa && <div style={{ fontSize: '12px', color: '#6b7280' }}>📍 {change.villa} → {change.subCategory}</div>}
+
+                              {change.comments?.length > 0 && (
+                                <div style={{ marginTop: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
+                                  <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '6px' }}>Comments:</div>
+                                  {change.comments.map((c, i) => {
+                                    const commenter = users.find(u => u.id === c.userId);
+                                    return (
+                                      <div key={i} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                                        <span style={{ fontWeight: '500' }}>{commenter?.username}:</span> {c.text}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2714,29 +2750,37 @@ export default function Home() {
                   <div>
                     <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#6b7280', marginBottom: '16px' }}>History</h3>
                     <div style={{ display: 'grid', gap: '8px' }}>
-                      {myHistory.slice(-10).reverse().map(change => (
-                        <div key={change.id} style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: '500' }}>
-                              {change.type === 'edit' && `Changed ${change.field}`}
-                              {change.type === 'add_step' && `Added step: "${change.newTask?.step}"`}
-                              {change.type === 'add_phase' && `Added phase: ${change.subCategory}`}
-                              {change.type === 'delete' && `Deleted step`}
-                              {change.type === 'add_sequence' && `Added sequence`}
+                      {myHistory.slice(-10).reverse().map(change => {
+                        const isFieldEdit = change.type === 'field_edit';
+                        const fieldLabels = { earliestStart: 'Earliest Start', duration: 'Est. Duration', skilledWorkers: 'Skilled Workers', unskilledWorkers: 'Unskilled Workers', status: 'Status', step: 'Step', task: 'Task', notes: 'Notes', expectedArrival: 'Expected Arrival' };
+                        return (
+                          <div key={change.id} style={{ background: '#fff', borderRadius: '8px', border: `1px solid ${isFieldEdit ? 'rgba(147,51,234,0.3)' : '#e5e7eb'}`, padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isFieldEdit ? '#9333ea' : '#f59e0b' }}></span>
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: '500' }}>
+                                  {change.type === 'field_edit' && `Changed ${fieldLabels[change.field] || change.field}`}
+                                  {change.type === 'edit' && `Changed ${change.field}`}
+                                  {change.type === 'add_step' && `Added step: "${change.newTask?.step || '(unnamed)'}"`}
+                                  {change.type === 'add_phase' && `Added phase: ${change.subCategory}`}
+                                  {change.type === 'delete' && `Deleted step`}
+                                  {change.type === 'add_sequence' && `Added sequence`}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>{change.villa} • {formatTime(change.timestamp)}</div>
+                              </div>
                             </div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>{change.villa} • {formatTime(change.timestamp)}</div>
+                            <span style={{
+                              fontSize: '11px',
+                              padding: '4px 10px',
+                              background: change.status === 'approved' ? '#ecfdf5' : '#fef2f2',
+                              color: change.status === 'approved' ? '#059669' : '#dc2626',
+                              borderRadius: '20px',
+                              fontWeight: '600',
+                              textTransform: 'capitalize'
+                            }}>{change.status === 'approved' ? '✓ Approved' : '✕ Rejected'}</span>
                           </div>
-                          <span style={{
-                            fontSize: '11px',
-                            padding: '4px 10px',
-                            background: change.status === 'approved' ? '#ecfdf5' : '#fef2f2',
-                            color: change.status === 'approved' ? '#059669' : '#dc2626',
-                            borderRadius: '20px',
-                            fontWeight: '600',
-                            textTransform: 'capitalize'
-                          }}>{change.status === 'approved' ? '✓ Approved' : '✕ Rejected'}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
