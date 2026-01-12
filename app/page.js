@@ -221,6 +221,7 @@ const Icon = ({ name, size = 20 }) => {
     copy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>,
     bug: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3.003 3.003 0 116 0v1" /><path d="M12 20c-3.3 0-6-2.7-6-6v-3a6 6 0 0112 0v3c0 3.3-2.7 6-6 6z" /><path d="M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M17.47 9c1.93-.2 3.53-1.9 3.53-4M18 13h4M21 21c0-2.1-1.7-3.9-3.8-4" /></svg>,
     image: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>,
+    info: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>,
   };
   return icons[name] || null;
 };
@@ -1360,7 +1361,7 @@ export default function Home() {
   const proposeChange = (type, data) => {
     const change = {
       id: 'pc' + Date.now(),
-      type, // 'edit', 'add_step', 'add_phase', 'delete', 'reorder', 'add_sequence'
+      type, // 'edit', 'add_step', 'add_phase', 'delete', 'reorder', 'add_sequence', 'field_edit'
       ...data,
       requestedBy: currentUser.id,
       timestamp: new Date().toISOString(),
@@ -1371,7 +1372,7 @@ export default function Home() {
     // Create task for admin to review
     setKanbanTasks(prev => [...prev, {
       id: 'review' + Date.now(),
-      title: `Review: ${type} by ${currentUser.username}`,
+      title: `Review: ${type === 'field_edit' ? `${data.field} update` : type} by ${currentUser.username}`,
       assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', // Patrick
       column: 'today',
       dueDate: TODAY,
@@ -1385,10 +1386,52 @@ export default function Home() {
       id: Date.now(),
       userId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', // Patrick
       fromUserId: currentUser.id,
-      text: `${currentUser.username} proposed a change to Building Sequence`,
+      text: type === 'field_edit' 
+        ? `${currentUser.username} proposed ${data.field} update for "${data.taskName || 'a task'}"`
+        : `${currentUser.username} proposed a change to Building Sequence`,
       timestamp: new Date().toISOString(),
       read: false
     }]);
+  };
+
+  // Fields that workers can propose edits for
+  const WORKER_EDITABLE_FIELDS = ['earliestStart', 'duration', 'skilledWorkers', 'unskilledWorkers'];
+
+  // Propose a field edit (for workers on existing approved rows)
+  const proposeFieldEdit = (task, field, newValue) => {
+    // Check if there's already a pending edit for this task+field
+    const existingPending = pendingChanges.find(c => 
+      c.type === 'field_edit' && 
+      c.taskId === task.id && 
+      c.field === field && 
+      c.status === 'pending'
+    );
+    if (existingPending) {
+      // Update existing pending change
+      setPendingChanges(prev => prev.map(c => 
+        c.id === existingPending.id ? { ...c, newValue, timestamp: new Date().toISOString() } : c
+      ));
+    } else {
+      proposeChange('field_edit', {
+        taskId: task.id,
+        taskName: task.task || task.step,
+        villa: task.villa,
+        subCategory: task.subCategory,
+        field,
+        oldValue: task[field],
+        newValue
+      });
+    }
+  };
+
+  // Get pending field edit for a specific task+field
+  const getPendingFieldEdit = (taskId, field) => {
+    return pendingChanges.find(c => 
+      c.type === 'field_edit' && 
+      c.taskId === taskId && 
+      c.field === field && 
+      c.status === 'pending'
+    );
   };
 
   const approveChange = (changeId) => {
@@ -1398,6 +1441,17 @@ export default function Home() {
     // Apply the change
     if (change.type === 'edit') {
       setBuildingTasks(prev => prev.map(t => t.id === change.taskId ? { ...t, [change.field]: change.newValue } : t));
+    } else if (change.type === 'field_edit') {
+      setBuildingTasks(prev => prev.map(t => t.id === change.taskId ? { ...t, [change.field]: change.newValue } : t));
+      // Notify the requester
+      setNotifications(prev => [...prev, {
+        id: Date.now(),
+        userId: change.requestedBy,
+        fromUserId: currentUser.id,
+        text: `Your ${change.field} update was approved`,
+        timestamp: new Date().toISOString(),
+        read: false
+      }]);
     } else if (change.type === 'add_step') {
       setBuildingTasks(prev => [...prev, change.newTask]);
     } else if (change.type === 'add_phase') {
@@ -1415,8 +1469,22 @@ export default function Home() {
   };
 
   const rejectChange = (changeId) => {
+    const change = pendingChanges.find(c => c.id === changeId);
     setPendingChanges(prev => prev.map(c => c.id === changeId ? { ...c, status: 'rejected' } : c));
     setKanbanTasks(prev => prev.filter(t => t.linkedChangeId !== changeId));
+    // Notify requester of rejection
+    if (change) {
+      setNotifications(prev => [...prev, {
+        id: Date.now(),
+        userId: change.requestedBy,
+        fromUserId: currentUser.id,
+        text: change.type === 'field_edit' 
+          ? `Your ${change.field} update was rejected`
+          : `Your change request was rejected`,
+        timestamp: new Date().toISOString(),
+        read: false
+      }]);
+    }
   };
 
   const addChangeComment = (changeId, text) => {
@@ -1980,7 +2048,7 @@ export default function Home() {
               <button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add First Phase</button>
             </div>
           )}
-          {Object.entries(grouped).map(([subCat, catTasks]) => { const mainCat = catTasks[0]?.mainCategory || ''; const approvedCount = catTasks.filter(t => !t.isPending).length; const pendingCount = catTasks.filter(t => t.isPending).length; const isPendingPhase = approvedCount === 0 && pendingCount > 0; return (<div key={subCat} style={{ marginBottom: '32px', background: isPendingPhase ? 'rgba(251,191,36,0.15)' : '#fff', borderRadius: '12px', border: isPendingPhase ? '2px solid #fbbf24' : '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: isPendingPhase ? 'rgba(251,191,36,0.3)' : '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>{isPendingPhase && <span style={{ fontSize: '10px', background: '#fbbf24', color: '#78350f', padding: '3px 8px', borderRadius: '4px', fontWeight: '600' }}>PENDING PHASE</span>}<div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0, color: isPendingPhase ? '#92400e' : 'inherit' }}>{subCat}</h3><span style={{ fontSize: '12px', color: isPendingPhase ? '#b45309' : '#6b7280' }}>{approvedCount} steps{pendingCount > 0 && <span style={{ marginLeft: '8px', color: '#f59e0b' }}>+{pendingCount} pending</span>}</span></div>{currentUser.isAdmin && !isPendingPhase && <button type="button" onClick={() => setEditPhaseModal({ subCat, mainCat, villa: currentVilla })} style={{ padding: '4px 8px', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer', color: '#6b7280', fontSize: '12px' }} title="Edit phase">✏️</button>}</div><button type="button" onClick={() => handleAddStep(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: isPendingPhase ? 'rgba(251,191,36,0.5)' : '#ecfdf5', color: isPendingPhase ? '#78350f' : '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: isPendingPhase ? 'rgba(251,191,36,0.2)' : '#fafafa' }}>{['', 'Readiness', 'Status', 'Steps', 'Task', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; const isPending = t.isPending; const canEdit = !isPending || (isPending && t.requestedBy === currentUser.id) || currentUser.isAdmin; const requester = isPending ? users.find(u => u.id === t.requestedBy) : null; return (<tr key={t.id || t.changeId} draggable={!isPending} onDragStart={(e) => !isPending && handleRowDragStart(e, t, subCat)} onDragOver={(e) => !isPending && handleRowDragOver(e, t)} onDrop={(e) => !isPending && handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isPending ? 'rgba(251,191,36,0.1)' : isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: isPending ? 'default' : 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '50px' }}>{isPending ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span style={{ fontSize: '10px', background: '#fbbf24', color: '#78350f', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>PENDING</span>{requester && <span style={{ fontSize: '9px', color: '#92400e' }}>{requester.username}</span>}</div> : <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div><button type="button" onClick={() => handleDuplicateStep(t)} title="Duplicate row" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px' }}><Icon name="copy" size={14} /></button></div>}</td><td style={{ padding: '8px' }}>{isPending && currentUser.isAdmin ? <div style={{ display: 'flex', gap: '4px' }}><button type="button" onClick={() => approveChange(t.changeId)} style={{ padding: '4px 8px', background: '#059669', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✓</button><button type="button" onClick={() => rejectChange(t.changeId)} style={{ padding: '4px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✗</button><button type="button" onClick={() => setPendingReviewModal(pendingChanges.find(c => c.id === t.changeId))} style={{ padding: '4px 8px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>💬</button></div> : r.type !== 'sequenced' && !isPending && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}>{!isPending && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status || []} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div>}{isPending && <span style={{ fontSize: '12px', color: '#92400e', fontStyle: 'italic' }}>Awaiting approval</span>}</td><td style={{ padding: '8px' }}><Dropdown value={t.step} options={(options.step || {})[subCat] || []} onChange={v => canEdit && editBuildingTask(t.id, 'step', v)} placeholder="Select step..." allowNew onAddNew={(newStep) => { if (canEdit) { setOptions(prev => ({ ...prev, step: { ...(prev.step || {}), [subCat]: [...((prev.step || {})[subCat] || []), newStep] } })); editBuildingTask(t.id, 'step', newStep); } }} /></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={(options.task || {})[subCat] || []} onChange={v => canEdit && editBuildingTask(t.id, 'task', v)} placeholder="Select task..." allowNew onAddNew={(newTask) => { if (canEdit) { setOptions(prev => ({ ...prev, task: { ...(prev.task || {}), [subCat]: [...((prev.task || {})[subCat] || []), newTask] } })); editBuildingTask(t.id, 'task', newTask); } }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => canEdit && editBuildingTask(t.id, 'notes', v)} placeholder="Notes" /></td><td style={{ padding: '8px' }}><input type="date" value={t.earliestStart || ''} onChange={e => canEdit && editBuildingTask(t.id, 'earliestStart', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px', background: isPending ? 'rgba(251,191,36,0.1)' : '#fff' }} disabled={!canEdit} /></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => canEdit && editBuildingTask(t.id, 'expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px', background: isPending ? 'rgba(251,191,36,0.1)' : '#fff' }} disabled={!canEdit} /></td><td style={{ padding: '8px' }}><EditableCell value={t.duration} onChange={v => canEdit && editBuildingTask(t.id, 'duration', v)} placeholder="0:00" /></td><td style={{ padding: '8px' }}><MultiSelect values={t.skilledWorkers || []} options={options.skilledWorker || []} onChange={v => canEdit && editBuildingTask(t.id, 'skilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><MultiSelect values={t.unskilledWorkers || []} options={options.unskilledWorker || []} onChange={v => canEdit && editBuildingTask(t.id, 'unskilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}>{!isPending && <button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button>}</td><td style={{ padding: '8px' }}>{!isPending && <button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button>}{isPending && (currentUser.isAdmin || t.requestedBy === currentUser.id) && <button type="button" onClick={() => rejectChange(t.changeId)} title="Cancel" style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button>}</td></tr>); })}</tbody></table></div></div>); })}
+          {Object.entries(grouped).map(([subCat, catTasks]) => { const mainCat = catTasks[0]?.mainCategory || ''; const approvedCount = catTasks.filter(t => !t.isPending).length; const pendingCount = catTasks.filter(t => t.isPending).length; const isPendingPhase = approvedCount === 0 && pendingCount > 0; return (<div key={subCat} style={{ marginBottom: '32px', background: isPendingPhase ? 'rgba(251,191,36,0.15)' : '#fff', borderRadius: '12px', border: isPendingPhase ? '2px solid #fbbf24' : '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: isPendingPhase ? 'rgba(251,191,36,0.3)' : '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>{isPendingPhase && <span style={{ fontSize: '10px', background: '#fbbf24', color: '#78350f', padding: '3px 8px', borderRadius: '4px', fontWeight: '600' }}>PENDING PHASE</span>}<div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0, color: isPendingPhase ? '#92400e' : 'inherit' }}>{subCat}</h3><span style={{ fontSize: '12px', color: isPendingPhase ? '#b45309' : '#6b7280' }}>{approvedCount} steps{pendingCount > 0 && <span style={{ marginLeft: '8px', color: '#f59e0b' }}>+{pendingCount} pending</span>}</span></div>{currentUser.isAdmin && !isPendingPhase && <button type="button" onClick={() => setEditPhaseModal({ subCat, mainCat, villa: currentVilla })} style={{ padding: '4px 8px', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer', color: '#6b7280', fontSize: '12px' }} title="Edit phase">✏️</button>}</div><button type="button" onClick={() => handleAddStep(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: isPendingPhase ? 'rgba(251,191,36,0.5)' : '#ecfdf5', color: isPendingPhase ? '#78350f' : '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: isPendingPhase ? 'rgba(251,191,36,0.2)' : '#fafafa' }}>{['', 'Readiness', 'Status', 'Steps', 'Task', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h === 'Est. Duration' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{h}<span title="Hours per person" style={{ cursor: 'help', color: '#9ca3af' }}><Icon name="info" size={12} /></span></span> : h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; const isPending = t.isPending; const canEdit = !isPending || (isPending && t.requestedBy === currentUser.id) || currentUser.isAdmin; const requester = isPending ? users.find(u => u.id === t.requestedBy) : null; const pendingEarliestStart = getPendingFieldEdit(t.id, 'earliestStart'); const pendingDuration = getPendingFieldEdit(t.id, 'duration'); const pendingSkilled = getPendingFieldEdit(t.id, 'skilledWorkers'); const pendingUnskilled = getPendingFieldEdit(t.id, 'unskilledWorkers'); const hasPendingEdits = pendingEarliestStart || pendingDuration || pendingSkilled || pendingUnskilled; return (<tr key={t.id || t.changeId} draggable={!isPending} onDragStart={(e) => !isPending && handleRowDragStart(e, t, subCat)} onDragOver={(e) => !isPending && handleRowDragOver(e, t)} onDrop={(e) => !isPending && handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isPending ? 'rgba(251,191,36,0.1)' : hasPendingEdits ? 'rgba(147,51,234,0.05)' : isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: isPending ? 'default' : 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '50px' }}>{isPending ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span style={{ fontSize: '10px', background: '#fbbf24', color: '#78350f', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>PENDING</span>{requester && <span style={{ fontSize: '9px', color: '#92400e' }}>{requester.username}</span>}</div> : <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div><button type="button" onClick={() => handleDuplicateStep(t)} title="Duplicate row" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px' }}><Icon name="copy" size={14} /></button></div>}</td><td style={{ padding: '8px' }}>{isPending && currentUser.isAdmin ? <div style={{ display: 'flex', gap: '4px' }}><button type="button" onClick={() => approveChange(t.changeId)} style={{ padding: '4px 8px', background: '#059669', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✓</button><button type="button" onClick={() => rejectChange(t.changeId)} style={{ padding: '4px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✗</button><button type="button" onClick={() => setPendingReviewModal(pendingChanges.find(c => c.id === t.changeId))} style={{ padding: '4px 8px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>💬</button></div> : r.type !== 'sequenced' && !isPending && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}>{!isPending && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status || []} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div>}{isPending && <span style={{ fontSize: '12px', color: '#92400e', fontStyle: 'italic' }}>Awaiting approval</span>}</td><td style={{ padding: '8px' }}><Dropdown value={t.step} options={(options.step || {})[subCat] || []} onChange={v => canEdit && editBuildingTask(t.id, 'step', v)} placeholder="Select step..." allowNew onAddNew={(newStep) => { if (canEdit) { setOptions(prev => ({ ...prev, step: { ...(prev.step || {}), [subCat]: [...((prev.step || {})[subCat] || []), newStep] } })); editBuildingTask(t.id, 'step', newStep); } }} /></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={(options.task || {})[subCat] || []} onChange={v => canEdit && editBuildingTask(t.id, 'task', v)} placeholder="Select task..." allowNew onAddNew={(newTask) => { if (canEdit) { setOptions(prev => ({ ...prev, task: { ...(prev.task || {}), [subCat]: [...((prev.task || {})[subCat] || []), newTask] } })); editBuildingTask(t.id, 'task', newTask); } }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => canEdit && editBuildingTask(t.id, 'notes', v)} placeholder="Notes" /></td><td style={{ padding: '8px' }}><div style={{ position: 'relative' }}>{pendingEarliestStart ? (<div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><input type="date" value={pendingEarliestStart.newValue || ''} disabled style={{ padding: '6px', border: '2px solid #9333ea', borderRadius: '6px', fontSize: '13px', background: 'rgba(147,51,234,0.1)' }} />{currentUser.isAdmin && <div style={{ display: 'flex', gap: '2px' }}><button type="button" onClick={() => approveChange(pendingEarliestStart.id)} style={{ padding: '2px 6px', background: '#059669', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>✓</button><button type="button" onClick={() => rejectChange(pendingEarliestStart.id)} style={{ padding: '2px 6px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>✗</button></div>}{!currentUser.isAdmin && pendingEarliestStart.requestedBy === currentUser.id && <span style={{ fontSize: '9px', color: '#9333ea' }}>Pending approval</span>}</div>) : (<input type="date" value={t.earliestStart || ''} onChange={e => { if (currentUser.isAdmin) { editBuildingTask(t.id, 'earliestStart', e.target.value); } else if (!isPending) { proposeFieldEdit(t, 'earliestStart', e.target.value); } }} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px', background: isPending ? 'rgba(251,191,36,0.1)' : '#fff' }} disabled={isPending && !currentUser.isAdmin} />)}</div></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => canEdit && editBuildingTask(t.id, 'expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px', background: isPending ? 'rgba(251,191,36,0.1)' : '#fff' }} disabled={!canEdit} /></td><td style={{ padding: '8px' }}><div style={{ position: 'relative' }}>{pendingDuration ? (<div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><input type="text" value={pendingDuration.newValue || ''} disabled style={{ padding: '6px', border: '2px solid #9333ea', borderRadius: '6px', fontSize: '13px', background: 'rgba(147,51,234,0.1)', width: '60px' }} />{currentUser.isAdmin && <div style={{ display: 'flex', gap: '2px' }}><button type="button" onClick={() => approveChange(pendingDuration.id)} style={{ padding: '2px 6px', background: '#059669', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>✓</button><button type="button" onClick={() => rejectChange(pendingDuration.id)} style={{ padding: '2px 6px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>✗</button></div>}{!currentUser.isAdmin && pendingDuration.requestedBy === currentUser.id && <span style={{ fontSize: '9px', color: '#9333ea' }}>Pending</span>}</div>) : (<EditableCell value={t.duration} onChange={v => { if (currentUser.isAdmin) { editBuildingTask(t.id, 'duration', v); } else if (!isPending) { proposeFieldEdit(t, 'duration', v); } }} placeholder="0" disabled={isPending && !currentUser.isAdmin} />)}</div></td><td style={{ padding: '8px' }}><div style={{ position: 'relative' }}>{pendingSkilled ? (<div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><div style={{ padding: '6px', border: '2px solid #9333ea', borderRadius: '6px', fontSize: '12px', background: 'rgba(147,51,234,0.1)', minWidth: '80px' }}>{(pendingSkilled.newValue || []).join(', ') || 'None'}</div>{currentUser.isAdmin && <div style={{ display: 'flex', gap: '2px' }}><button type="button" onClick={() => approveChange(pendingSkilled.id)} style={{ padding: '2px 6px', background: '#059669', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>✓</button><button type="button" onClick={() => rejectChange(pendingSkilled.id)} style={{ padding: '2px 6px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>✗</button></div>}{!currentUser.isAdmin && pendingSkilled.requestedBy === currentUser.id && <span style={{ fontSize: '9px', color: '#9333ea' }}>Pending</span>}</div>) : (<MultiSelect values={t.skilledWorkers || []} options={options.skilledWorker || []} onChange={v => { if (currentUser.isAdmin) { editBuildingTask(t.id, 'skilledWorkers', v); } else if (!isPending) { proposeFieldEdit(t, 'skilledWorkers', v); } }} placeholder="Select..." />)}</div></td><td style={{ padding: '8px' }}><div style={{ position: 'relative' }}>{pendingUnskilled ? (<div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}><div style={{ padding: '6px', border: '2px solid #9333ea', borderRadius: '6px', fontSize: '12px', background: 'rgba(147,51,234,0.1)', minWidth: '80px' }}>{(pendingUnskilled.newValue || []).join(', ') || 'None'}</div>{currentUser.isAdmin && <div style={{ display: 'flex', gap: '2px' }}><button type="button" onClick={() => approveChange(pendingUnskilled.id)} style={{ padding: '2px 6px', background: '#059669', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>✓</button><button type="button" onClick={() => rejectChange(pendingUnskilled.id)} style={{ padding: '2px 6px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>✗</button></div>}{!currentUser.isAdmin && pendingUnskilled.requestedBy === currentUser.id && <span style={{ fontSize: '9px', color: '#9333ea' }}>Pending</span>}</div>) : (<MultiSelect values={t.unskilledWorkers || []} options={options.unskilledWorker || []} onChange={v => { if (currentUser.isAdmin) { editBuildingTask(t.id, 'unskilledWorkers', v); } else if (!isPending) { proposeFieldEdit(t, 'unskilledWorkers', v); } }} placeholder="Select..." />)}</div></td><td style={{ padding: '8px' }}>{!isPending && <button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button>}</td><td style={{ padding: '8px' }}>{!isPending && <button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button>}{isPending && (currentUser.isAdmin || t.requestedBy === currentUser.id) && <button type="button" onClick={() => rejectChange(t.changeId)} title="Cancel" style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button>}</td></tr>); })}</tbody></table></div></div>); })}
         </>)}
 
         {/* Daily Worker Schedule */}
@@ -2416,58 +2484,122 @@ export default function Home() {
             </div>
           ) : (
             <>
-              {/* Quick Actions Header */}
-              <div style={{ background: '#fef3c7', borderRadius: '12px', padding: '16px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '24px' }}>⚡</span>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>{pendingChanges.filter(c => c.status === 'pending').length} changes need your review</div>
-                    <div style={{ fontSize: '12px', color: '#b45309' }}>Quick review keeps the team moving</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" onClick={() => { pendingChanges.filter(c => c.status === 'pending').forEach(c => approveChange(c.id)); }} style={{ padding: '8px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Approve All</button>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {pendingChanges.filter(c => c.status === 'pending').map(change => {
-                  const requestedByUser = users.find(u => u.id === change.requestedBy);
-                  const task = change.taskId ? buildingTasks.find(t => t.id === change.taskId) : null;
-                  return (
-                    <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid #fef3c7', padding: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <img src={requestedByUser?.avatar} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
-                          <div>
-                            <div style={{ fontSize: '14px', fontWeight: '600' }}>{requestedByUser?.username}</div>
-                            <div style={{ fontSize: '12px', color: '#6b7280' }}>{formatTime(change.timestamp)}</div>
-                          </div>
-                        </div>
-                        <span style={{ fontSize: '11px', padding: '4px 10px', background: '#fef3c7', color: '#d97706', borderRadius: '20px', fontWeight: '600', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
-                      </div>
-
-                      <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>
-                        {change.type === 'edit' && <>Change <span style={{ color: '#059669' }}>{change.field}</span>: <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{change.oldValue || '(empty)'}</span> → <span style={{ color: '#059669' }}>{change.newValue}</span></>}
-                        {change.type === 'add_step' && <>Add new step: <span style={{ color: '#059669' }}>"{change.newTask?.step}"</span> to {change.subCategory}</>}
-                        {change.type === 'add_phase' && <>Add new phase: <span style={{ color: '#059669' }}>{change.subCategory}</span></>}
-                        {change.type === 'delete' && <>Delete step: <span style={{ color: '#dc2626' }}>"{change.step}"</span></>}
-                        {change.type === 'add_sequence' && <>Add new building sequence: <span style={{ color: '#059669' }}>"{change.sequenceLabel}"</span></>}
-                      </div>
-
-                      {change.villa && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>📍 {change.villa} → {change.subCategory}</div>}
-
-                      {change.comments?.length > 0 && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>💬 {change.comments.length} comment(s)</div>}
-
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                        <button type="button" onClick={() => approveChange(change.id)} style={{ flex: 1, padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>✓ Approve</button>
-                        <button type="button" onClick={() => setPendingReviewModal(change)} style={{ padding: '10px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Review</button>
-                        <button type="button" onClick={() => rejectChange(change.id)} style={{ padding: '10px 16px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>✕</button>
+              {/* Field Updates Section (Purple) */}
+              {pendingChanges.filter(c => c.status === 'pending' && c.type === 'field_edit').length > 0 && (
+                <div style={{ marginBottom: '32px' }}>
+                  <div style={{ background: 'rgba(147,51,234,0.1)', borderRadius: '12px', padding: '16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '24px' }}>📝</span>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#7c3aed' }}>{pendingChanges.filter(c => c.status === 'pending' && c.type === 'field_edit').length} Field Updates</div>
+                        <div style={{ fontSize: '12px', color: '#8b5cf6' }}>Worker-proposed changes to task details</div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => { pendingChanges.filter(c => c.status === 'pending' && c.type === 'field_edit').forEach(c => approveChange(c.id)); }} style={{ padding: '8px 16px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Approve All</button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {pendingChanges.filter(c => c.status === 'pending' && c.type === 'field_edit').map(change => {
+                      const requestedByUser = users.find(u => u.id === change.requestedBy);
+                      const task = change.taskId ? buildingTasks.find(t => t.id === change.taskId) : null;
+                      const fieldLabels = { earliestStart: 'Earliest Start', duration: 'Est. Duration', skilledWorkers: 'Skilled Workers', unskilledWorkers: 'Unskilled Workers' };
+                      const formatValue = (field, val) => {
+                        if (!val && val !== 0) return '(empty)';
+                        if (field === 'skilledWorkers' || field === 'unskilledWorkers') return Array.isArray(val) ? val.join(', ') || '(none)' : val;
+                        return val;
+                      };
+                      return (
+                        <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid rgba(147,51,234,0.3)', padding: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <img src={requestedByUser?.avatar} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: '600' }}>{requestedByUser?.username}</div>
+                                <div style={{ fontSize: '11px', color: '#6b7280' }}>{formatTime(change.timestamp)}</div>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '10px', padding: '3px 8px', background: 'rgba(147,51,234,0.1)', color: '#7c3aed', borderRadius: '12px', fontWeight: '600' }}>{fieldLabels[change.field] || change.field}</span>
+                          </div>
+
+                          <div style={{ fontSize: '13px', marginBottom: '8px' }}>
+                            <span style={{ color: '#6b7280' }}>Task:</span> <span style={{ fontWeight: '500' }}>{change.taskName || task?.task || task?.step || 'Unknown'}</span>
+                          </div>
+                          <div style={{ fontSize: '13px', marginBottom: '12px' }}>
+                            <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{formatValue(change.field, change.oldValue)}</span>
+                            <span style={{ margin: '0 8px', color: '#9ca3af' }}>→</span>
+                            <span style={{ color: '#7c3aed', fontWeight: '600' }}>{formatValue(change.field, change.newValue)}</span>
+                          </div>
+                          {change.villa && <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '12px' }}>📍 {change.villa} → {change.subCategory}</div>}
+
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button type="button" onClick={() => approveChange(change.id)} style={{ flex: 1, padding: '8px 12px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>✓ Approve</button>
+                            <button type="button" onClick={() => rejectChange(change.id)} style={{ padding: '8px 12px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}>✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Sequence Changes Section (Yellow) */}
+              {pendingChanges.filter(c => c.status === 'pending' && c.type !== 'field_edit').length > 0 && (
+                <div style={{ marginBottom: '32px' }}>
+                  <div style={{ background: '#fef3c7', borderRadius: '12px', padding: '16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '24px' }}>⚡</span>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>{pendingChanges.filter(c => c.status === 'pending' && c.type !== 'field_edit').length} Sequence Changes</div>
+                        <div style={{ fontSize: '12px', color: '#b45309' }}>New steps, phases, and deletions</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => { pendingChanges.filter(c => c.status === 'pending' && c.type !== 'field_edit').forEach(c => approveChange(c.id)); }} style={{ padding: '8px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Approve All</button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    {pendingChanges.filter(c => c.status === 'pending' && c.type !== 'field_edit').map(change => {
+                      const requestedByUser = users.find(u => u.id === change.requestedBy);
+                      const task = change.taskId ? buildingTasks.find(t => t.id === change.taskId) : null;
+                      return (
+                        <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid #fef3c7', padding: '20px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <img src={requestedByUser?.avatar} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                              <div>
+                                <div style={{ fontSize: '14px', fontWeight: '600' }}>{requestedByUser?.username}</div>
+                                <div style={{ fontSize: '12px', color: '#6b7280' }}>{formatTime(change.timestamp)}</div>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '11px', padding: '4px 10px', background: '#fef3c7', color: '#d97706', borderRadius: '20px', fontWeight: '600', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
+                          </div>
+
+                          <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>
+                            {change.type === 'edit' && <>Change <span style={{ color: '#059669' }}>{change.field}</span>: <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{change.oldValue || '(empty)'}</span> → <span style={{ color: '#059669' }}>{change.newValue}</span></>}
+                            {change.type === 'add_step' && <>Add new step: <span style={{ color: '#059669' }}>"{change.newTask?.step}"</span> to {change.subCategory}</>}
+                            {change.type === 'add_phase' && <>Add new phase: <span style={{ color: '#059669' }}>{change.subCategory}</span></>}
+                            {change.type === 'delete' && <>Delete step: <span style={{ color: '#dc2626' }}>"{change.step}"</span></>}
+                            {change.type === 'add_sequence' && <>Add new building sequence: <span style={{ color: '#059669' }}>"{change.sequenceLabel}"</span></>}
+                          </div>
+
+                          {change.villa && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>📍 {change.villa} → {change.subCategory}</div>}
+
+                          {change.comments?.length > 0 && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>💬 {change.comments.length} comment(s)</div>}
+
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                            <button type="button" onClick={() => approveChange(change.id)} style={{ flex: 1, padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>✓ Approve</button>
+                            <button type="button" onClick={() => setPendingReviewModal(change)} style={{ padding: '10px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Review</button>
+                            <button type="button" onClick={() => rejectChange(change.id)} style={{ padding: '10px 16px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
