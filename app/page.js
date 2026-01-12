@@ -2168,15 +2168,15 @@ export default function Home() {
 
   const pendingCount = pendingChanges.filter(p => p.status === 'pending').length;
 
-  // Sort and filter projects/zones
-  const sortedProjects = [...buildingSequences.standalone]
+  // Sort and filter projects/zones (with safety checks)
+  const sortedProjects = (buildingSequences?.standalone || [])
     .filter(s => showArchived || !s.archived)
     .sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
-  const sortedZones = [...buildingSequences.commons.zones]
+  const sortedZones = (buildingSequences?.commons?.zones || [])
     .filter(z => showArchived || !z.archived)
     .sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
-  const archivedProjectCount = buildingSequences.standalone.filter(s => s.archived).length;
-  const archivedZoneCount = buildingSequences.commons.zones.filter(z => z.archived).length;
+  const archivedProjectCount = (buildingSequences?.standalone || []).filter(s => s.archived).length;
+  const archivedZoneCount = (buildingSequences?.commons?.zones || []).filter(z => z.archived).length;
   const totalArchived = archivedProjectCount + archivedZoneCount;
 
   // Build nav items from new structure
@@ -2201,7 +2201,7 @@ export default function Home() {
         // Add Project button (admin only)
         ...(currentUser.isAdmin ? [{ id: 'add-project', label: '+ Add Project', isAddProject: true }] : []),
         // Section header for Commons
-        { id: 'commons-header', label: buildingSequences.commons.label, isHeader: true },
+        { id: 'commons-header', label: buildingSequences?.commons?.label || 'Commons / Infrastructure', isHeader: true },
         // Zones under Commons (sorted: starred first, filtered: hide archived)
         ...sortedZones.map(z => ({
           id: `zone-${z.id}`,
@@ -2233,13 +2233,13 @@ export default function Home() {
     // Standalone projects
     if (activeNav.startsWith('project-')) {
       const projectId = activeNav.replace('project-', '');
-      const project = buildingSequences.standalone.find(s => s.id === projectId);
+      const project = (buildingSequences?.standalone || []).find(s => s.id === projectId);
       return project?.label || null;
     }
     // Zone projects under Commons
     if (activeNav.startsWith('zone-')) {
       const zoneId = activeNav.replace('zone-', '');
-      const zone = buildingSequences.commons.zones.find(z => z.id === zoneId);
+      const zone = (buildingSequences?.commons?.zones || []).find(z => z.id === zoneId);
       return zone?.label || null;
     }
     return null;
