@@ -1485,10 +1485,39 @@ export default function Home() {
         setSyncStatus('checking');
         setSyncError(null);
 
-        // NOTE: Demo mode users (Patrick/David) also load from Supabase
-        // They are real users who need to see and save real data
+        // Demo mode: Load READ-ONLY mock data (no Supabase connection needed)
+        if (demoMode) {
+          console.log('🎭 Demo mode - loading mock data (read-only)');
+          setBuildingTasks(initialBuildingTasks);
+          setKanbanTasks([...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
+          setRecurringTasks(initialRecurringTasks);
+          setComments(initialComments);
+          setNotifications(initialNotifications);
+          setWorkforce(initialWorkforce);
+          setBuildingSequences({
+            standalone: [
+              { id: 'villa3', label: 'Villa 3', starred: true, archived: false },
+              { id: 'villa2', label: 'Villa 2', starred: false, archived: false },
+              { id: 'villa1', label: 'Villa 1', starred: false, archived: false },
+            ],
+            commons: {
+              label: 'Commons / Infrastructure',
+              zones: [
+                { id: 'main-electricity', label: 'Main Electricity / Internet', starred: false, archived: false },
+                { id: 'gardenbed-upper', label: 'Gardenbed 1 (Upper)', starred: false, archived: false },
+                { id: 'gardenbed-lower', label: 'Gardenbed 2 (Lower)', starred: false, archived: false },
+                { id: 'chicken-coop', label: 'Chicken Coop', starred: false, archived: false },
+                { id: 'landscaping', label: 'Landscaping', starred: false, archived: false },
+              ]
+            }
+          });
+          setSyncStatus('saved');
+          setDataLoaded(true);
+          setInitialLoadFailed(false);
+          return; // Skip Supabase loading for demo mode
+        }
 
-        // First test connection
+        // Real users: Load from Supabase
         const connected = await testConnection();
         if (!connected) {
           throw new Error('Could not connect to database. Please check your internet connection.');
@@ -1613,9 +1642,8 @@ export default function Home() {
 
   // Save data to Supabase (debounced) - shows error overlay on failure
   useEffect(() => {
-    // Don't save if we haven't loaded yet or if initial load failed
-    // NOTE: Demo mode users CAN save to Supabase (they are real users Patrick/David)
-    if (!dataLoaded || initialLoadFailed) return;
+    // Don't save if: not loaded, load failed, or demo mode (read-only)
+    if (!dataLoaded || initialLoadFailed || demoMode) return;
 
     // Debounce Supabase saves
     if (saveTimeoutRef.current) {
@@ -1631,6 +1659,7 @@ export default function Home() {
           buildingTasks,
           kanbanTasks,
           recurringTasks,
+          comments,
           workforce,
           options,
           buildingSequences,
