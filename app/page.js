@@ -1348,6 +1348,7 @@ export default function Home() {
   const [initialLoadFailed, setInitialLoadFailed] = useState(false);
 
   const saveTimeoutRef = useRef(null);
+  const isInitialLoad = useRef(true); // Skip first save after load
 
   // State starts EMPTY - will be populated from Supabase only
   // DO NOT use mock data as initial state - it can overwrite real data!
@@ -1644,6 +1645,13 @@ export default function Home() {
   useEffect(() => {
     // Don't save if: not loaded, load failed, or demo mode (read-only)
     if (!dataLoaded || initialLoadFailed || demoMode) return;
+
+    // Skip first save after initial load (data hasn't changed yet)
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      setSyncStatus('saved');
+      return;
+    }
 
     // Debounce Supabase saves
     if (saveTimeoutRef.current) {
