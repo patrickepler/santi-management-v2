@@ -1485,37 +1485,8 @@ export default function Home() {
         setSyncStatus('checking');
         setSyncError(null);
 
-        // If demo mode is active, use mock data instead of Supabase
-        if (demoMode) {
-          console.log('🎭 Demo mode active - using mock data');
-          setBuildingTasks(initialBuildingTasks);
-          setKanbanTasks([...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
-          setRecurringTasks(initialRecurringTasks);
-          setComments(initialComments);
-          setNotifications(initialNotifications);
-          setWorkforce(initialWorkforce);
-          setBuildingSequences({
-            standalone: [
-              { id: 'villa3', label: 'Villa 3', starred: true, archived: false },
-              { id: 'villa2', label: 'Villa 2', starred: false, archived: false },
-              { id: 'villa1', label: 'Villa 1', starred: false, archived: false },
-            ],
-            commons: {
-              label: 'Commons / Infrastructure',
-              zones: [
-                { id: 'main-electricity', label: 'Main Electricity / Internet', starred: false, archived: false },
-                { id: 'gardenbed-upper', label: 'Gardenbed 1 (Upper)', starred: false, archived: false },
-                { id: 'gardenbed-lower', label: 'Gardenbed 2 (Lower)', starred: false, archived: false },
-                { id: 'chicken-coop', label: 'Chicken Coop', starred: false, archived: false },
-                { id: 'landscaping', label: 'Landscaping', starred: false, archived: false },
-              ]
-            }
-          });
-          setSyncStatus('saved');
-          setDataLoaded(true);
-          setInitialLoadFailed(false);
-          return; // Skip Supabase loading for demo mode
-        }
+        // NOTE: Demo mode users (Patrick/David) also load from Supabase
+        // They are real users who need to see and save real data
 
         // First test connection
         const connected = await testConnection();
@@ -1642,8 +1613,9 @@ export default function Home() {
 
   // Save data to Supabase (debounced) - shows error overlay on failure
   useEffect(() => {
-    // Don't save if we haven't loaded yet, initial load failed, or in demo mode
-    if (!dataLoaded || initialLoadFailed || demoMode) return;
+    // Don't save if we haven't loaded yet or if initial load failed
+    // NOTE: Demo mode users CAN save to Supabase (they are real users Patrick/David)
+    if (!dataLoaded || initialLoadFailed) return;
 
     // Debounce Supabase saves
     if (saveTimeoutRef.current) {
