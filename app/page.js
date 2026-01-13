@@ -401,7 +401,8 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
   const [form, setForm] = useState({ ...task });
   const [commentText, setCommentText] = useState('');
   const isSC = task?.type === 'sc';
-  const isNewTask = task?.title === 'New Task'; // New tasks created by handleAddTask have default title
+  // New tasks have empty title - task not yet added to state
+  const isNewTask = !task?.title || task?.title === '';
   const linkedBT = isSC ? buildingTasks.find(bt => bt.id === task.buildingTaskId) : null;
   const scStatuses = ['research', 'researchApproval', 'pendingArrival', 'readyToStart'];
   const scLabels = { research: 'Research', researchApproval: 'Research Approval', pendingArrival: 'Pending Arrival', readyToStart: 'Ready to Start' };
@@ -460,17 +461,19 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
           </div>
         )}
 
-        {/* Comments Section */}
-        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginTop: '16px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px' }}>Comments ({taskComments.length})</label>
-          <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '12px' }}>
-            {taskComments.length === 0 ? <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', padding: '20px' }}>No comments yet</p> : taskComments.map(c => {
-              const author = users.find(u => u.id === c.userId);
-              return <div key={c.id} style={{ marginBottom: '12px', padding: '10px', background: '#f9fafb', borderRadius: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}><img src={author?.avatar} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%' }} /><span style={{ fontSize: '12px', fontWeight: '600' }}>{author?.username}</span><span style={{ fontSize: '10px', color: '#9ca3af' }}>{formatTime(c.timestamp)}</span></div><p style={{ margin: 0, fontSize: '13px', color: '#374151' }}>{c.text.split(/(@\w+)/g).map((part, i) => part.startsWith('@') ? <span key={i} style={{ color: '#059669', fontWeight: '500' }}>{part}</span> : part)}</p></div>;
-            })}
+        {/* Comments Section - only show for existing tasks */}
+        {!isNewTask && (
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginTop: '16px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px' }}>Comments ({taskComments.length})</label>
+            <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '12px' }}>
+              {taskComments.length === 0 ? <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', padding: '20px' }}>No comments yet</p> : taskComments.map(c => {
+                const author = users.find(u => u.id === c.userId);
+                return <div key={c.id} style={{ marginBottom: '12px', padding: '10px', background: '#f9fafb', borderRadius: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}><img src={author?.avatar} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%' }} /><span style={{ fontSize: '12px', fontWeight: '600' }}>{author?.username}</span><span style={{ fontSize: '10px', color: '#9ca3af' }}>{formatTime(c.timestamp)}</span></div><p style={{ margin: 0, fontSize: '13px', color: '#374151' }}>{c.text.split(/(@\w+)/g).map((part, i) => part.startsWith('@') ? <span key={i} style={{ color: '#059669', fontWeight: '500' }}>{part}</span> : part)}</p></div>;
+              })}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}><input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddComment()} placeholder="Add a comment... (use @ to mention)" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px' }} /><button type="button" onClick={handleAddComment} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Icon name="send" size={16} /></button></div>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}><input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddComment()} placeholder="Add a comment... (use @ to mention)" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px' }} /><button type="button" onClick={handleAddComment} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Icon name="send" size={16} /></button></div>
-        </div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>{task && !isSC && !isNewTask ? <button type="button" onClick={() => { if (confirm('Delete this task?')) { onDelete(task.id); onClose(); } }} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button> : <div />}<div style={{ display: 'flex', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { onUpdate(form); onClose(); }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button></div></div>
       </div>
@@ -1964,9 +1967,26 @@ export default function Home() {
       statusHistory: [...(t.statusHistory || []), { from: fromColumn, to: toColumn, userId: currentUser.id, timestamp: new Date().toISOString() }]
     } : t));
   };
-  const handleTaskUpdate = (updated) => { setKanbanTasks(prev => prev.map(t => t.id === updated.id ? updated : t)); if (updated.type === 'sc' && updated.buildingTaskId) { if (updated.scStatus === 'pendingArrival') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Supply Chain Pending Arrival', expectedArrival: updated.expectedArrival } : t)); if (updated.scStatus === 'readyToStart' || updated.column === 'done') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Ready to start (Supply Chain confirmed on-site)' } : t)); } };
+  const handleTaskUpdate = (updated) => {
+    // Handle both create (no existing task) and update
+    const exists = kanbanTasks.find(t => t.id === updated.id);
+    if (exists) {
+      setKanbanTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+    } else {
+      // Create new task
+      setKanbanTasks(prev => [...prev, updated]);
+    }
+    if (updated.type === 'sc' && updated.buildingTaskId) {
+      if (updated.scStatus === 'pendingArrival') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Supply Chain Pending Arrival', expectedArrival: updated.expectedArrival } : t));
+      if (updated.scStatus === 'readyToStart' || updated.column === 'done') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Ready to start (Supply Chain confirmed on-site)' } : t));
+    }
+  };
   const handleTaskDelete = (id) => setKanbanTasks(prev => prev.filter(t => t.id !== id));
-  const handleAddTask = (column = 'today') => { const newTask = { id: 'k' + Date.now(), title: 'New Task', assignedTo: currentUser.id, column: column, dueDate: TODAY, type: 'manual', createdAt: TODAY }; setKanbanTasks(prev => [...prev, newTask]); setTaskModal(newTask); };
+  // Only open modal with new task template, don't add to state until Save
+  const handleAddTask = (column = 'today') => {
+    const newTask = { id: 'k' + Date.now(), title: '', assignedTo: currentUser.id, column: column, dueDate: TODAY, type: 'manual', createdAt: TODAY };
+    setTaskModal(newTask);
+  };
   const handleRecurringSave = (task) => { if (task.id) { setRecurringTasks(prev => prev.map(t => t.id === task.id ? task : t)); } else { setRecurringTasks(prev => [...prev, { ...task, id: 'r' + Date.now(), createdAt: TODAY }]); } };
   const handleRecurringDelete = (id) => setRecurringTasks(prev => prev.filter(t => t.id !== id));
   const handleDuplicateRecurring = (task) => {
