@@ -401,6 +401,7 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
   const [form, setForm] = useState({ ...task });
   const [commentText, setCommentText] = useState('');
   const isSC = task?.type === 'sc';
+  const isNewTask = task?.title === 'New Task'; // New tasks created by handleAddTask have default title
   const linkedBT = isSC ? buildingTasks.find(bt => bt.id === task.buildingTaskId) : null;
   const scStatuses = ['research', 'researchApproval', 'pendingArrival', 'readyToStart'];
   const scLabels = { research: 'Research', researchApproval: 'Research Approval', pendingArrival: 'Pending Arrival', readyToStart: 'Ready to Start' };
@@ -471,7 +472,7 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
           <div style={{ display: 'flex', gap: '8px' }}><input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddComment()} placeholder="Add a comment... (use @ to mention)" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px' }} /><button type="button" onClick={handleAddComment} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Icon name="send" size={16} /></button></div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>{task && !isSC ? <button type="button" onClick={() => { onDelete(task.id); onClose(); }} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button> : <div />}<div style={{ display: 'flex', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { onUpdate(form); onClose(); }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button></div></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>{task && !isSC && !isNewTask ? <button type="button" onClick={() => { if (confirm('Delete this task?')) { onDelete(task.id); onClose(); } }} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button> : <div />}<div style={{ display: 'flex', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { onUpdate(form); onClose(); }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button></div></div>
       </div>
     </div>
   );
