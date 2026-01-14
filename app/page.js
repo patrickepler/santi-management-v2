@@ -185,16 +185,16 @@ const getReadiness = (task, categoryTasks, index) => {
 };
 
 const getStatusStyle = (status) => {
-  const styles = {
-    'Done': { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', dot: '#16a34a' },
-    'In Progress': { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', dot: '#7c3aed' },
-    'Ready to start (Supply Chain confirmed on-site)': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' },
+  const styles = { 
+    'Done': { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', dot: '#16a34a' }, 
+    'In Progress': { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', dot: '#7c3aed' }, 
+    'Ready to start (Supply Chain confirmed on-site)': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' }, 
     'Ready': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' }, // Legacy support
-    'Supply Chain Arrived to be Confirmed': { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', dot: '#0ea5e9' },
-    'Supply Chain Pending Order': { bg: 'rgba(220,38,38,0.1)', color: '#dc2626', dot: '#dc2626' },
-    'Supply Chain Pending Arrival': { bg: 'rgba(217,119,6,0.1)', color: '#d97706', dot: '#d97706' },
-    'Blocked': { bg: 'rgba(107,114,128,0.1)', color: '#6b7280', dot: '#6b7280' },
-    'On Hold': { bg: 'rgba(156,163,175,0.1)', color: '#9ca3af', dot: '#9ca3af' }
+    'Supply Chain Arrived to be Confirmed': { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', dot: '#0ea5e9' }, 
+    'Supply Chain Pending Order': { bg: 'rgba(220,38,38,0.1)', color: '#dc2626', dot: '#dc2626' }, 
+    'Supply Chain Pending Arrival': { bg: 'rgba(217,119,6,0.1)', color: '#d97706', dot: '#d97706' }, 
+    'Blocked': { bg: 'rgba(107,114,128,0.1)', color: '#6b7280', dot: '#6b7280' }, 
+    'On Hold': { bg: 'rgba(156,163,175,0.1)', color: '#9ca3af', dot: '#9ca3af' } 
   };
   return styles[status] || { bg: '#f3f4f6', color: '#6b7280', dot: '#9ca3af' };
 };
@@ -401,8 +401,6 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
   const [form, setForm] = useState({ ...task });
   const [commentText, setCommentText] = useState('');
   const isSC = task?.type === 'sc';
-  // New tasks have empty title - task not yet added to state
-  const isNewTask = !task?.title || task?.title === '';
   const linkedBT = isSC ? buildingTasks.find(bt => bt.id === task.buildingTaskId) : null;
   const scStatuses = ['research', 'researchApproval', 'pendingArrival', 'readyToStart'];
   const scLabels = { research: 'Research', researchApproval: 'Research Approval', pendingArrival: 'Pending Arrival', readyToStart: 'Ready to Start' };
@@ -461,21 +459,19 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
           </div>
         )}
 
-        {/* Comments Section - only show for existing tasks */}
-        {!isNewTask && (
-          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginTop: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px' }}>Comments ({taskComments.length})</label>
-            <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '12px' }}>
-              {taskComments.length === 0 ? <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', padding: '20px' }}>No comments yet</p> : taskComments.map(c => {
-                const author = users.find(u => u.id === c.userId);
-                return <div key={c.id} style={{ marginBottom: '12px', padding: '10px', background: '#f9fafb', borderRadius: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}><img src={author?.avatar} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%' }} /><span style={{ fontSize: '12px', fontWeight: '600' }}>{author?.username}</span><span style={{ fontSize: '10px', color: '#9ca3af' }}>{formatTime(c.timestamp)}</span></div><p style={{ margin: 0, fontSize: '13px', color: '#374151' }}>{c.text.split(/(@\w+)/g).map((part, i) => part.startsWith('@') ? <span key={i} style={{ color: '#059669', fontWeight: '500' }}>{part}</span> : part)}</p></div>;
-              })}
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}><input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddComment()} placeholder="Add a comment... (use @ to mention)" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px' }} /><button type="button" onClick={handleAddComment} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Icon name="send" size={16} /></button></div>
+        {/* Comments Section */}
+        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginTop: '16px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px' }}>Comments ({taskComments.length})</label>
+          <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '12px' }}>
+            {taskComments.length === 0 ? <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', padding: '20px' }}>No comments yet</p> : taskComments.map(c => {
+              const author = users.find(u => u.id === c.userId);
+              return <div key={c.id} style={{ marginBottom: '12px', padding: '10px', background: '#f9fafb', borderRadius: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}><img src={author?.avatar} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%' }} /><span style={{ fontSize: '12px', fontWeight: '600' }}>{author?.username}</span><span style={{ fontSize: '10px', color: '#9ca3af' }}>{formatTime(c.timestamp)}</span></div><p style={{ margin: 0, fontSize: '13px', color: '#374151' }}>{c.text.split(/(@\w+)/g).map((part, i) => part.startsWith('@') ? <span key={i} style={{ color: '#059669', fontWeight: '500' }}>{part}</span> : part)}</p></div>;
+            })}
           </div>
-        )}
+          <div style={{ display: 'flex', gap: '8px' }}><input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddComment()} placeholder="Add a comment... (use @ to mention)" style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px' }} /><button type="button" onClick={handleAddComment} style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Icon name="send" size={16} /></button></div>
+        </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>{task && !isSC && !isNewTask ? <button type="button" onClick={() => { if (confirm('Delete this task?')) { onDelete(task.id); onClose(); } }} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button> : <div />}<div style={{ display: 'flex', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { onUpdate(form); onClose(); }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button></div></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>{task && !isSC ? <button type="button" onClick={() => { onDelete(task.id); onClose(); }} style={{ padding: '10px 20px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button> : <div />}<div style={{ display: 'flex', gap: '8px' }}><button type="button" onClick={onClose} style={{ padding: '10px 20px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button><button type="button" onClick={() => { onUpdate(form); onClose(); }} style={{ padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Save</button></div></div>
       </div>
     </div>
   );
@@ -1041,13 +1037,13 @@ const Dropdown = ({ value, options, onChange, placeholder, allowNew, onAddNew, d
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const ref = useRef(null);
   const buttonRef = useRef(null);
-
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
+  
+  useEffect(() => { 
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; 
+    document.addEventListener('mousedown', h); 
+    return () => document.removeEventListener('mousedown', h); 
   }, []);
-
+  
   const handleOpen = () => {
     if (disabled) return;
     if (!open && buttonRef.current) {
@@ -1056,7 +1052,7 @@ const Dropdown = ({ value, options, onChange, placeholder, allowNew, onAddNew, d
     }
     setOpen(!open);
   };
-
+  
   const handleAddNew = () => {
     if (newValue.trim() && onAddNew) {
       onAddNew(newValue.trim());
@@ -1150,16 +1146,16 @@ const SyncStatusIndicator = ({ status, lastSaved, onRetry }) => {
         return { icon: '☁️', text: 'Synced', color: '#059669', bg: 'rgba(5,150,105,0.1)' };
     }
   };
-
+  
   const display = getStatusDisplay();
-
+  
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      padding: '4px 10px',
-      background: display.bg,
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '6px', 
+      padding: '4px 10px', 
+      background: display.bg, 
       borderRadius: '6px',
       fontSize: '12px',
       fontWeight: '500',
@@ -1208,7 +1204,7 @@ const ConnectionBlockingOverlay = ({ error, onRetry, onCopyBackup, isRetrying })
         <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
           Do not continue working until the connection is restored.
         </p>
-
+        
         {error && (
           <div style={{
             background: '#fef2f2',
@@ -1223,7 +1219,7 @@ const ConnectionBlockingOverlay = ({ error, onRetry, onCopyBackup, isRetrying })
             <strong>Error:</strong> {error}
           </div>
         )}
-
+        
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
             onClick={onRetry}
@@ -1244,7 +1240,7 @@ const ConnectionBlockingOverlay = ({ error, onRetry, onCopyBackup, isRetrying })
           >
             {isRetrying ? '🔄 Retrying...' : '🔄 Retry Connection'}
           </button>
-
+          
           <button
             onClick={onCopyBackup}
             style={{
@@ -1264,7 +1260,7 @@ const ConnectionBlockingOverlay = ({ error, onRetry, onCopyBackup, isRetrying })
             📋 Copy Data Backup
           </button>
         </div>
-
+        
         <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '20px' }}>
           If this persists, contact support or check your internet connection.
         </p>
@@ -1301,7 +1297,7 @@ const ConnectionFailedScreen = ({ error, onRetry, isRetrying }) => {
         <p style={{ fontSize: '16px', color: '#4b5563', marginBottom: '24px' }}>
           Unable to establish a connection to the database. Please check your internet connection and try again.
         </p>
-
+        
         {error && (
           <div style={{
             background: '#fef2f2',
@@ -1316,7 +1312,7 @@ const ConnectionFailedScreen = ({ error, onRetry, isRetrying }) => {
             <strong>Error:</strong> {error}
           </div>
         )}
-
+        
         <button
           onClick={onRetry}
           disabled={isRetrying}
@@ -1343,29 +1339,40 @@ export default function Home() {
   const [users, setUsers] = useState(mockUsers);
   const [demoMode, setDemoMode] = useState(null); // null, 'patrick', or 'david'
   const [dataLoaded, setDataLoaded] = useState(false);
-
+  
   // Sync status: 'checking' | 'connected' | 'saving' | 'saved' | 'error'
   const [syncStatus, setSyncStatus] = useState('checking');
   const [syncError, setSyncError] = useState(null);
   const [lastSaved, setLastSaved] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [initialLoadFailed, setInitialLoadFailed] = useState(false);
-
+  
   const saveTimeoutRef = useRef(null);
-  const isInitialLoad = useRef(true); // Skip first save after load
 
-  // State starts EMPTY - will be populated from Supabase only
-  // DO NOT use mock data as initial state - it can overwrite real data!
-  const [buildingTasks, setBuildingTasks] = useState([]);
-  const [kanbanTasks, setKanbanTasks] = useState([]);
-  const [recurringTasks, setRecurringTasks] = useState([]);
-  const [comments, setComments] = useState({});
-  const [notifications, setNotifications] = useState([]);
-  const [options, setOptions] = useState(initialOptions); // Keep options as they're config, not user data
-  const [workforce, setWorkforce] = useState([]);
+  // State starts with initial values, will be populated from Supabase
+  const [buildingTasks, setBuildingTasks] = useState(initialBuildingTasks);
+  const [kanbanTasks, setKanbanTasks] = useState([...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
+  const [recurringTasks, setRecurringTasks] = useState(initialRecurringTasks);
+  const [comments, setComments] = useState(initialComments);
+  const [notifications, setNotifications] = useState(initialNotifications);
+  const [options, setOptions] = useState(initialOptions);
+  const [workforce, setWorkforce] = useState(initialWorkforce);
   const [buildingSequences, setBuildingSequences] = useState({
-    standalone: [],
-    commons: { label: 'Commons / Infrastructure', zones: [] }
+    standalone: [
+      { id: 'villa3', label: 'Villa 3', starred: true, archived: false },
+      { id: 'villa2', label: 'Villa 2', starred: false, archived: false },
+      { id: 'villa1', label: 'Villa 1', starred: false, archived: false },
+    ],
+    commons: {
+      label: 'Commons / Infrastructure',
+      zones: [
+        { id: 'main-electricity', label: 'Main Electricity / Internet', starred: false, archived: false },
+        { id: 'gardenbed-upper', label: 'Gardenbed 1 (Upper)', starred: false, archived: false },
+        { id: 'gardenbed-lower', label: 'Gardenbed 2 (Lower)', starred: false, archived: false },
+        { id: 'chicken-coop', label: 'Chicken Coop', starred: false, archived: false },
+        { id: 'landscaping', label: 'Landscaping', starred: false, archived: false },
+      ]
+    }
   });
 
   const [workerModal, setWorkerModal] = useState(null);
@@ -1386,7 +1393,7 @@ export default function Home() {
   const [pendingChanges, setPendingChanges] = useState([]);
   const [bugReports, setBugReports] = useState([]);
   const [bugReportModal, setBugReportModal] = useState(null);
-
+  
   // Global paste handler for bug report modal
   useEffect(() => {
     if (!bugReportModal) return;
@@ -1407,7 +1414,7 @@ export default function Home() {
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
   }, [bugReportModal]);
-
+  
   const [pendingReviewModal, setPendingReviewModal] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
@@ -1489,40 +1496,8 @@ export default function Home() {
       try {
         setSyncStatus('checking');
         setSyncError(null);
-
-        // Demo mode: Load READ-ONLY mock data (no Supabase connection needed)
-        if (demoMode) {
-          console.log('🎭 Demo mode - loading mock data (read-only)');
-          setBuildingTasks(initialBuildingTasks);
-          setKanbanTasks([...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
-          setRecurringTasks(initialRecurringTasks);
-          setComments(initialComments);
-          setNotifications(initialNotifications);
-          setWorkforce(initialWorkforce);
-          setBuildingSequences({
-            standalone: [
-              { id: 'villa3', label: 'Villa 3', starred: true, archived: false },
-              { id: 'villa2', label: 'Villa 2', starred: false, archived: false },
-              { id: 'villa1', label: 'Villa 1', starred: false, archived: false },
-            ],
-            commons: {
-              label: 'Commons / Infrastructure',
-              zones: [
-                { id: 'main-electricity', label: 'Main Electricity / Internet', starred: false, archived: false },
-                { id: 'gardenbed-upper', label: 'Gardenbed 1 (Upper)', starred: false, archived: false },
-                { id: 'gardenbed-lower', label: 'Gardenbed 2 (Lower)', starred: false, archived: false },
-                { id: 'chicken-coop', label: 'Chicken Coop', starred: false, archived: false },
-                { id: 'landscaping', label: 'Landscaping', starred: false, archived: false },
-              ]
-            }
-          });
-          setSyncStatus('saved');
-          setDataLoaded(true);
-          setInitialLoadFailed(false);
-          return; // Skip Supabase loading for demo mode
-        }
-
-        // Real users: Load from Supabase
+        
+        // First test connection
         const connected = await testConnection();
         if (!connected) {
           throw new Error('Could not connect to database. Please check your internet connection.');
@@ -1530,30 +1505,38 @@ export default function Home() {
         console.log('✅ Database connection verified');
 
         const data = await db.loadAllData();
-
-        // ALWAYS use Supabase data - no mock data seeding!
-        // If DB is empty, app shows empty state (user can add data manually)
-        console.log('📥 Loading data from Supabase...');
-
-        // Always set from Supabase (use empty array/object if null)
-        setBuildingTasks(data.buildingTasks || []);
-        setKanbanTasks(data.kanbanTasks || []);
-        setRecurringTasks(data.recurringTasks || []);
-        setComments(data.comments || {});
-        setWorkforce(data.workforce || []);
-
+        
+        // Load ALL data from Supabase - no localStorage fallback
+        if (data.buildingTasks && data.buildingTasks.length > 0) {
+          setBuildingTasks(data.buildingTasks);
+        }
+        if (data.kanbanTasks && data.kanbanTasks.length > 0) {
+          setKanbanTasks(data.kanbanTasks);
+        }
+        if (data.recurringTasks && data.recurringTasks.length > 0) {
+          setRecurringTasks(data.recurringTasks);
+        }
+        if (data.comments && Object.keys(data.comments).length > 0) {
+          setComments(data.comments);
+        }
+        if (data.workforce && data.workforce.length > 0) {
+          setWorkforce(data.workforce);
+        }
         if (data.options && Object.keys(data.options).length > 0) {
           setOptions(data.options);
         }
-
         if (data.buildingSequences && data.buildingSequences.standalone) {
           setBuildingSequences(data.buildingSequences);
+          console.log('✅ Loaded buildingSequences from Supabase');
         }
-
-        setPendingChanges(data.pendingChanges || []);
-        setBugReports(data.bugReports || []);
-
-        console.log(`✅ Loaded: ${data.buildingTasks?.length || 0} building tasks, ${data.kanbanTasks?.length || 0} kanban tasks`);
+        if (data.pendingChanges && data.pendingChanges.length > 0) {
+          setPendingChanges(data.pendingChanges);
+          console.log(`✅ Loaded ${data.pendingChanges.length} pending changes from Supabase`);
+        }
+        if (data.bugReports && data.bugReports.length > 0) {
+          setBugReports(data.bugReports);
+          console.log(`✅ Loaded ${data.bugReports.length} bug reports from Supabase`);
+        }
 
         // Load profiles and merge with mockUsers
         if (data.profiles && data.profiles.length > 0) {
@@ -1587,7 +1570,7 @@ export default function Home() {
     };
 
     loadFromSupabase();
-  }, [demoMode]); // Re-run when demoMode changes
+  }, []);
 
   // Retry connection function
   const retryConnection = async () => {
@@ -1598,22 +1581,16 @@ export default function Home() {
         throw new Error('Could not connect to database. Please check your internet connection.');
       }
       const data = await db.loadAllData();
-
-      // Always use Supabase data unconditionally (consistent with main load logic)
-      setBuildingTasks(data.buildingTasks || []);
-      setKanbanTasks(data.kanbanTasks || []);
-      setRecurringTasks(data.recurringTasks || []);
-      setComments(data.comments || {});
-      setWorkforce(data.workforce || []);
-      if (data.options && Object.keys(data.options).length > 0) {
-        setOptions(data.options);
-      }
-      if (data.buildingSequences?.standalone) {
-        setBuildingSequences(data.buildingSequences);
-      }
-      setPendingChanges(data.pendingChanges || []);
-      setBugReports(data.bugReports || []);
-
+      
+      // Update all state
+      if (data.buildingTasks) setBuildingTasks(data.buildingTasks);
+      if (data.kanbanTasks) setKanbanTasks(data.kanbanTasks);
+      if (data.recurringTasks) setRecurringTasks(data.recurringTasks);
+      if (data.comments) setComments(data.comments);
+      if (data.workforce) setWorkforce(data.workforce);
+      if (data.options) setOptions(data.options);
+      if (data.buildingSequences?.standalone) setBuildingSequences(data.buildingSequences);
+      
       setSyncStatus('saved');
       setSyncError(null);
       setLastSaved(new Date().toISOString());
@@ -1647,15 +1624,8 @@ export default function Home() {
 
   // Save data to Supabase (debounced) - shows error overlay on failure
   useEffect(() => {
-    // Don't save if: not loaded, load failed, or demo mode (read-only)
-    if (!dataLoaded || initialLoadFailed || demoMode) return;
-
-    // Skip first save after initial load (data hasn't changed yet)
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
-      setSyncStatus('saved');
-      return;
-    }
+    // Don't save if we haven't loaded yet or if initial load failed
+    if (!dataLoaded || initialLoadFailed) return;
 
     // Debounce Supabase saves
     if (saveTimeoutRef.current) {
@@ -1671,7 +1641,6 @@ export default function Home() {
           buildingTasks,
           kanbanTasks,
           recurringTasks,
-          comments,
           workforce,
           options,
           buildingSequences,
@@ -1696,6 +1665,44 @@ export default function Home() {
       }
     };
   }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, buildingSequences, pendingChanges, bugReports, dataLoaded, initialLoadFailed]);
+
+  // Auto-create SC kanban tasks for building tasks with "Supply Chain Pending Order" status
+  // This handles new rows created via Add Step or Duplicate Step that bypass handleBuildingStatusChange
+  useEffect(() => {
+    if (!dataLoaded || !currentUser.isAdmin) return;
+    
+    // Find building tasks that need SC kanban tasks
+    const tasksNeedingSC = buildingTasks.filter(bt => {
+      // Must have Supply Chain Pending Order status
+      if (bt.status !== 'Supply Chain Pending Order') return false;
+      // Must have step AND task filled in (not blank rows)
+      if (!bt.step || !bt.task) return false;
+      // Must not already have an SC kanban task
+      const hasExistingSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === bt.id);
+      return !hasExistingSCTask;
+    });
+
+    // Create SC tasks for each one
+    if (tasksNeedingSC.length > 0) {
+      console.log(`🔗 Auto-creating ${tasksNeedingSC.length} SC task(s) for new building rows`);
+      const newSCTasks = tasksNeedingSC.map(task => ({
+        id: 'sc' + Date.now() + Math.random().toString(36).substr(2, 5),
+        buildingTaskId: task.id,
+        title: `SC: ${task.step} - ${task.task} - ${task.villa}`,
+        assignedTo: PROCUREMENT_USER_ID,
+        column: 'thisWeek',
+        scStatus: 'research',
+        dueDate: calculateDeadlineOnSite(task.earliestStart),
+        deadlineOnSite: calculateDeadlineOnSite(task.earliestStart),
+        expectedArrival: '',
+        type: 'sc',
+        estTime: 2,
+        actualTime: null,
+        createdAt: TODAY
+      }));
+      setKanbanTasks(prev => [...prev, ...newSCTasks]);
+    }
+  }, [buildingTasks, kanbanTasks, dataLoaded, currentUser.isAdmin]);
 
   // Show connection failed screen if initial load failed
   if (initialLoadFailed) {
@@ -1744,7 +1751,7 @@ export default function Home() {
       id: Date.now(),
       userId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', // Patrick
       fromUserId: currentUser.id,
-      text: type === 'field_edit'
+      text: type === 'field_edit' 
         ? `${currentUser.username} proposed ${data.field} update for "${data.taskName || 'a task'}"`
         : `${currentUser.username} proposed a change to Building Sequence`,
       timestamp: new Date().toISOString(),
@@ -1755,15 +1762,15 @@ export default function Home() {
   // Propose a field edit (for workers on existing approved rows)
   const proposeFieldEdit = (task, field, newValue) => {
     // Check if there's already a pending edit for this task+field
-    const existingPending = pendingChanges.find(c =>
-      c.type === 'field_edit' &&
-      c.taskId === task.id &&
-      c.field === field &&
+    const existingPending = pendingChanges.find(c => 
+      c.type === 'field_edit' && 
+      c.taskId === task.id && 
+      c.field === field && 
       c.status === 'pending'
     );
     if (existingPending) {
       // Update existing pending change
-      setPendingChanges(prev => prev.map(c =>
+      setPendingChanges(prev => prev.map(c => 
         c.id === existingPending.id ? { ...c, newValue, timestamp: new Date().toISOString() } : c
       ));
     } else {
@@ -1781,10 +1788,10 @@ export default function Home() {
 
   // Get pending field edit for a specific task+field
   const getPendingFieldEdit = (taskId, field) => {
-    return pendingChanges.find(c =>
-      c.type === 'field_edit' &&
-      c.taskId === taskId &&
-      c.field === field &&
+    return pendingChanges.find(c => 
+      c.type === 'field_edit' && 
+      c.taskId === taskId && 
+      c.field === field && 
       c.status === 'pending'
     );
   };
@@ -1833,7 +1840,7 @@ export default function Home() {
         id: Date.now(),
         userId: change.requestedBy,
         fromUserId: currentUser.id,
-        text: change.type === 'field_edit'
+        text: change.type === 'field_edit' 
           ? `Your ${change.field} update was rejected`
           : `Your change request was rejected`,
         timestamp: new Date().toISOString(),
@@ -1852,17 +1859,17 @@ export default function Home() {
   // Wrapper for building task edits - routes through approval if not admin
   const editBuildingTask = (taskId, field, newValue) => {
     // First check if this is a pending task
-    const pendingTask = pendingChanges.find(c =>
-      c.newTask?.id === taskId &&
-      c.status === 'pending' &&
+    const pendingTask = pendingChanges.find(c => 
+      c.newTask?.id === taskId && 
+      c.status === 'pending' && 
       (c.type === 'add_step' || c.type === 'add_phase')
     );
-
+    
     if (pendingTask) {
       // Update the pending change - only allow creator or admin
       if (currentUser.isAdmin || pendingTask.requestedBy === currentUser.id) {
-        setPendingChanges(prev => prev.map(c =>
-          c.id === pendingTask.id
+        setPendingChanges(prev => prev.map(c => 
+          c.id === pendingTask.id 
             ? { ...c, newTask: { ...c.newTask, [field]: newValue } }
             : c
         ));
@@ -1967,26 +1974,9 @@ export default function Home() {
       statusHistory: [...(t.statusHistory || []), { from: fromColumn, to: toColumn, userId: currentUser.id, timestamp: new Date().toISOString() }]
     } : t));
   };
-  const handleTaskUpdate = (updated) => {
-    // Handle both create (no existing task) and update
-    const exists = kanbanTasks.find(t => t.id === updated.id);
-    if (exists) {
-      setKanbanTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
-    } else {
-      // Create new task
-      setKanbanTasks(prev => [...prev, updated]);
-    }
-    if (updated.type === 'sc' && updated.buildingTaskId) {
-      if (updated.scStatus === 'pendingArrival') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Supply Chain Pending Arrival', expectedArrival: updated.expectedArrival } : t));
-      if (updated.scStatus === 'readyToStart' || updated.column === 'done') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Ready to start (Supply Chain confirmed on-site)' } : t));
-    }
-  };
+  const handleTaskUpdate = (updated) => { setKanbanTasks(prev => prev.map(t => t.id === updated.id ? updated : t)); if (updated.type === 'sc' && updated.buildingTaskId) { if (updated.scStatus === 'pendingArrival') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Supply Chain Pending Arrival', expectedArrival: updated.expectedArrival } : t)); if (updated.scStatus === 'readyToStart' || updated.column === 'done') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Ready to start (Supply Chain confirmed on-site)' } : t)); } };
   const handleTaskDelete = (id) => setKanbanTasks(prev => prev.filter(t => t.id !== id));
-  // Only open modal with new task template, don't add to state until Save
-  const handleAddTask = (column = 'today') => {
-    const newTask = { id: 'k' + Date.now(), title: '', assignedTo: currentUser.id, column: column, dueDate: TODAY, type: 'manual', createdAt: TODAY };
-    setTaskModal(newTask);
-  };
+  const handleAddTask = (column = 'today') => { const newTask = { id: 'k' + Date.now(), title: 'New Task', assignedTo: currentUser.id, column: column, dueDate: TODAY, type: 'manual', createdAt: TODAY }; setKanbanTasks(prev => [...prev, newTask]); setTaskModal(newTask); };
   const handleRecurringSave = (task) => { if (task.id) { setRecurringTasks(prev => prev.map(t => t.id === task.id ? task : t)); } else { setRecurringTasks(prev => [...prev, { ...task, id: 'r' + Date.now(), createdAt: TODAY }]); } };
   const handleRecurringDelete = (id) => setRecurringTasks(prev => prev.filter(t => t.id !== id));
   const handleDuplicateRecurring = (task) => {
@@ -1998,29 +1988,29 @@ export default function Home() {
   const handleRowDragStart = (e, task, subCat) => { setDraggedRow({ ...task, subCategory: subCat }); e.dataTransfer.effectAllowed = 'move'; };
   const handleRowDragOver = (e, task) => { e.preventDefault(); if (draggedRow && task.id !== draggedRow.id) setDragOverRow(task.id); };
   const handleRowDrop = (e, targetTask, catTasks) => { e.preventDefault(); if (!draggedRow || draggedRow.subCategory !== targetTask.subCategory) { setDraggedRow(null); setDragOverRow(null); return; } const fromIndex = catTasks.findIndex(t => t.id === draggedRow.id); const toIndex = catTasks.findIndex(t => t.id === targetTask.id); if (fromIndex !== -1 && toIndex !== -1) { const newOrder = [...catTasks]; const [moved] = newOrder.splice(fromIndex, 1); newOrder.splice(toIndex, 0, moved); setBuildingTasks(prev => { const updated = [...prev]; newOrder.forEach((t, i) => { const idx = updated.findIndex(x => x.id === t.id); if (idx !== -1) updated[idx] = { ...updated[idx], order: i + 1 }; }); return updated; }); } setDraggedRow(null); setDragOverRow(null); };
-
+  
   // Phase drag handlers
-  const handlePhaseDragStart = (e, subCat, mainCat) => {
-    setDraggedPhase({ subCat, mainCat });
-    e.dataTransfer.effectAllowed = 'move';
+  const handlePhaseDragStart = (e, subCat, mainCat) => { 
+    setDraggedPhase({ subCat, mainCat }); 
+    e.dataTransfer.effectAllowed = 'move'; 
   };
-  const handlePhaseDragOver = (e, subCat) => {
-    e.preventDefault();
-    if (draggedPhase && subCat !== draggedPhase.subCat) setDragOverPhase(subCat);
+  const handlePhaseDragOver = (e, subCat) => { 
+    e.preventDefault(); 
+    if (draggedPhase && subCat !== draggedPhase.subCat) setDragOverPhase(subCat); 
   };
-  const handlePhaseDrop = (e, targetSubCat, phaseList) => {
-    e.preventDefault();
+  const handlePhaseDrop = (e, targetSubCat, phaseList) => { 
+    e.preventDefault(); 
     if (!draggedPhase) { setDraggedPhase(null); setDragOverPhase(null); return; }
-
+    
     const fromIndex = phaseList.findIndex(p => p === draggedPhase.subCat);
     const toIndex = phaseList.findIndex(p => p === targetSubCat);
-
+    
     if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
       // Reorder phases by updating mainCategory with order prefix
       const newPhaseOrder = [...phaseList];
       const [moved] = newPhaseOrder.splice(fromIndex, 1);
       newPhaseOrder.splice(toIndex, 0, moved);
-
+      
       // Update all tasks in the current villa with new phase orders
       setBuildingTasks(prev => prev.map(t => {
         if (t.villa !== currentVilla) return t;
@@ -2032,8 +2022,8 @@ export default function Home() {
         return { ...t, mainCategory: `${orderPrefix} ${baseName}` };
       }));
     }
-    setDraggedPhase(null);
-    setDragOverPhase(null);
+    setDraggedPhase(null); 
+    setDragOverPhase(null); 
   };
   const handleDeleteBuildingTask = (id) => {
     if (currentUser.isAdmin) {
@@ -2281,7 +2271,7 @@ export default function Home() {
   const currentProject = getCurrentProject();
   const currentVilla = currentProject; // Keep for backward compatibility with buildingTasks.villa field
   const filteredBuildingTasks = currentProject ? buildingTasks.filter(t => t.villa === currentProject).filter(t => !search || t.step.toLowerCase().includes(search.toLowerCase()) || t.task.toLowerCase().includes(search.toLowerCase())) : [];
-
+  
   // Get pending tasks for this project (add_step and add_phase)
   const pendingTasksForProject = pendingChanges
     .filter(c => c.status === 'pending' && c.villa === currentProject && (c.type === 'add_step' || c.type === 'add_phase'))
@@ -2292,10 +2282,10 @@ export default function Home() {
       requestedBy: c.requestedBy,
       pendingType: c.type
     }));
-
+  
   // Combine approved and pending tasks
   const allTasksForProject = [...filteredBuildingTasks, ...pendingTasksForProject];
-
+  
   const grouped = allTasksForProject.reduce((acc, t) => { (acc[t.subCategory] = acc[t.subCategory] || []).push(t); return acc; }, {});
   Object.keys(grouped).forEach(k => grouped[k].sort((a, b) => (a.order || 999) - (b.order || 999)));
 
@@ -2309,14 +2299,14 @@ export default function Home() {
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f3f4f6' }}>
       {/* Blocking Overlay - shown when save fails */}
       {syncStatus === 'error' && dataLoaded && (
-        <ConnectionBlockingOverlay
-          error={syncError}
-          onRetry={retryConnection}
+        <ConnectionBlockingOverlay 
+          error={syncError} 
+          onRetry={retryConnection} 
           onCopyBackup={copyDataBackup}
           isRetrying={isRetrying}
         />
       )}
-
+      
       {/* Mobile Header */}
       <div style={{ display: sidebarOpen ? 'none' : 'flex', position: 'fixed', top: 0, left: 0, right: 0, height: '60px', background: '#fff', borderBottom: '1px solid #e5e7eb', alignItems: 'center', padding: '0 16px', zIndex: 900, gap: '12px' }}>
         <button type="button" onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }}><Icon name="menu" size={24} /></button>
@@ -2446,9 +2436,9 @@ export default function Home() {
                 </div>
                 <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: isArchived ? '#9ca3af' : '#1f2937' }}>{rt.title}</div>
                 <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
-                  {freq === 'weekly' && `Every ${rt.days?.join(', ') || 'N/A'}`}
-                  {freq === 'monthly' && `Day ${rt.days?.[0] || 'N/A'} of each month`}
-                  {freq === 'specific' && `${rt.specificDates?.length || 0} scheduled dates`}
+                  {freq === 'weekly' && `Every ${rt.days.join(', ')}`}
+                  {freq === 'monthly' && `Day ${rt.days[0]} of each month`}
+                  {freq === 'specific' && `${rt.specificDates.length} scheduled dates`}
                   {freq === 'daily' && 'Every day'}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid #f3f4f6' }}>
@@ -3083,7 +3073,7 @@ export default function Home() {
                 ) : (
                   <div style={{ marginBottom: '32px' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#6b7280', marginBottom: '16px' }}>⏳ Awaiting Approval ({myPending.length})</h3>
-
+                    
                     {/* Field Edits - Purple */}
                     {myFieldEdits.length > 0 && (
                       <div style={{ marginBottom: '20px' }}>
@@ -3314,7 +3304,7 @@ export default function Home() {
       {pendingReviewModal && <PendingReviewModal change={pendingReviewModal} onClose={() => setPendingReviewModal(null)} onApprove={approveChange} onReject={rejectChange} onComment={addChangeComment} users={users} buildingTasks={buildingTasks} />}
       {activeComments && <CommentsPanel taskId={activeComments} task={activeTask} comments={comments} setComments={setComments} currentUser={currentUser} users={users} onClose={() => setActiveComments(null)} setNotifications={setNotifications} />}
       {showNotifications && <NotificationsPanel notifications={notifications.filter(n => n.userId === currentUser.id)} setNotifications={setNotifications} users={users} onClose={() => setShowNotifications(false)} onGoToTask={(id) => { setActiveComments(id); setShowNotifications(false); }} />}
-
+      
       {/* Bug Report Modal */}
       {bugReportModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
@@ -3326,7 +3316,7 @@ export default function Home() {
             <div style={{ padding: '20px' }}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Screenshot <span style={{ color: '#dc2626' }}>*</span></label>
-                <div
+                <div 
                   style={{ border: '2px dashed #d1d5db', borderRadius: '8px', padding: '24px', textAlign: 'center', cursor: 'pointer', background: bugReportModal.screenshot ? '#f9fafb' : '#fff' }}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
@@ -3375,8 +3365,8 @@ export default function Home() {
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="button" onClick={() => setBugReportModal(null)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>Cancel</button>
-                <button
-                  type="button"
+                <button 
+                  type="button" 
                   onClick={() => {
                     if (!bugReportModal.screenshot || !bugReportModal.description.trim()) {
                       alert('Please add both a screenshot and description');
