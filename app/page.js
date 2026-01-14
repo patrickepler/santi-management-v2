@@ -1669,7 +1669,8 @@ export default function Home() {
   // Auto-create SC kanban tasks for building tasks with "Supply Chain Pending Order" status
   // This handles new rows created via Add Step or Duplicate Step that bypass handleBuildingStatusChange
   useEffect(() => {
-    if (!dataLoaded || !currentUser.isAdmin) return;
+    // Must be loaded, have a user, and user must be admin
+    if (!dataLoaded || !currentUser || !currentUser.isAdmin) return;
     
     // Find building tasks that need SC kanban tasks
     const tasksNeedingSC = buildingTasks.filter(bt => {
@@ -1702,7 +1703,7 @@ export default function Home() {
       }));
       setKanbanTasks(prev => [...prev, ...newSCTasks]);
     }
-  }, [buildingTasks, kanbanTasks, dataLoaded, currentUser.isAdmin]);
+  }, [buildingTasks, kanbanTasks, dataLoaded, currentUser]);
 
   // Show connection failed screen if initial load failed
   if (initialLoadFailed) {
