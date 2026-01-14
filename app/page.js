@@ -1,58 +1,58 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useUser, SignIn, SignOutButton } from '@clerk/nextjs';
-import { db, supabase } from '../lib/supabase';
+import { db, supabase, testConnection } from '../lib/supabase';
 
 // ============ USERS ============
 const mockUsers = [
-  { id: 1, email: 'patrick@northstar-performance.com', username: 'Patrick', avatar: 'https://ui-avatars.com/api/?name=Patrick&background=059669&color=fff', role: 'manager', isAdmin: true, managerId: null, approvers: [], canConfirmDelivery: true },
-  { id: 2, email: 'david@northstar-performance.com', username: 'David', avatar: 'https://ui-avatars.com/api/?name=David&background=0ea5e9&color=fff', role: 'manager', isAdmin: false, managerId: 1, approvers: [1], canConfirmDelivery: true },
-  { id: 3, email: 'jiratchaya@northstar-performance.com', username: 'Jean', avatar: 'https://ui-avatars.com/api/?name=Jean&background=8b5cf6&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 2, approvers: [1, 2], canConfirmDelivery: false },
-  { id: 4, email: 'jirapongthong@gmail.com', username: 'Ball', avatar: 'https://ui-avatars.com/api/?name=Ball&background=f59e0b&color=fff', role: 'supply/back end manager', isAdmin: false, managerId: 1, approvers: [1], canConfirmDelivery: false },
+  { id: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', email: 'patrick@northstar-performance.com', username: 'Patrick', avatar: 'https://ui-avatars.com/api/?name=Patrick&background=059669&color=fff', role: 'manager', isAdmin: true, managerId: null, approvers: [] },
+  { id: '0b5466d5-4410-47e3-af90-255fdac0ab3d', email: 'david@northstar-performance.com', username: 'David', avatar: 'https://ui-avatars.com/api/?name=David&background=0ea5e9&color=fff', role: 'worker', isAdmin: false, managerId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', approvers: ['ab2ee187-4508-49c2-a5d0-3d23c0160c81'] },
+  { id: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', email: 'jiratchaya@northstar-performance.com', username: 'Jean', avatar: 'https://ui-avatars.com/api/?name=Jean&background=8b5cf6&color=fff', role: 'worker', isAdmin: false, managerId: '0b5466d5-4410-47e3-af90-255fdac0ab3d', approvers: ['ab2ee187-4508-49c2-a5d0-3d23c0160c81', '0b5466d5-4410-47e3-af90-255fdac0ab3d'] },
+  { id: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', email: 'jirapongthong@gmail.com', username: 'Ball', avatar: 'https://ui-avatars.com/api/?name=Ball&background=f59e0b&color=fff', role: 'worker', isAdmin: false, managerId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', approvers: ['ab2ee187-4508-49c2-a5d0-3d23c0160c81'] },
 ];
 
-const CONSTRUCTION_MANAGER_ID = 2; // David - confirms SC arrivals
+const CONSTRUCTION_MANAGER_ID = '0b5466d5-4410-47e3-af90-255fdac0ab3d'; // David - confirms SC arrivals
 
-const PROCUREMENT_USER_ID = 4;
+const PROCUREMENT_USER_ID = 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31';
 const TODAY = '2026-01-06';
 
 // ============ INITIAL DATA ============
 const initialKanbanTasks = [
-  { id: 'k1', title: 'Review site safety protocols', assignedTo: 3, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-04' },
-  { id: 'k2', title: 'Coordinate with architect', assignedTo: 2, column: 'thisWeek', dueDate: '2026-01-08', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-03' },
-  { id: 'k3', title: 'Order safety gear', assignedTo: 4, column: 'waiting', dueDate: '2026-01-15', expectedArrival: '2026-01-12', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-02' },
-  { id: 'k4', title: 'Weekly progress report', assignedTo: 1, column: 'thisWeek', dueDate: '2026-01-10', type: 'manual', estTime: 1.5, actualTime: null, createdAt: '2026-01-01' },
-  { id: 'k5', title: 'Daily inbox zero & emails', assignedTo: 3, column: 'today', dueDate: '2026-01-06', type: 'recurring', estTime: 1, actualTime: null, createdAt: '2026-01-06' },
-  { id: 'k6', title: 'Research concrete suppliers', assignedTo: 3, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-05' },
-  { id: 'k7', title: 'Update project timeline', assignedTo: 2, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1.5, actualTime: null, createdAt: '2026-01-05' },
-  { id: 'k8', title: 'Check material inventory', assignedTo: 4, column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-05' },
-  { id: 'k9', title: 'Supplier price comparison', assignedTo: 3, column: 'review', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-04' },
-  { id: 'k10', title: 'Follow up on rebar delivery', assignedTo: 4, column: 'waiting', dueDate: '2026-01-10', expectedArrival: '2026-01-09', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-03' },
+  { id: 'k1', title: 'Review site safety protocols', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-04' },
+  { id: 'k2', title: 'Coordinate with architect', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', column: 'thisWeek', dueDate: '2026-01-08', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-03' },
+  { id: 'k3', title: 'Order safety gear', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'waiting', dueDate: '2026-01-15', expectedArrival: '2026-01-12', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-02' },
+  { id: 'k4', title: 'Weekly progress report', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', column: 'thisWeek', dueDate: '2026-01-10', type: 'manual', estTime: 1.5, actualTime: null, createdAt: '2026-01-01' },
+  { id: 'k5', title: 'Daily inbox zero & emails', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'today', dueDate: '2026-01-06', type: 'recurring', estTime: 1, actualTime: null, createdAt: '2026-01-06' },
+  { id: 'k6', title: 'Research concrete suppliers', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-05' },
+  { id: 'k7', title: 'Update project timeline', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1.5, actualTime: null, createdAt: '2026-01-05' },
+  { id: 'k8', title: 'Check material inventory', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'today', dueDate: '2026-01-06', type: 'manual', estTime: 1, actualTime: null, createdAt: '2026-01-05' },
+  { id: 'k9', title: 'Supplier price comparison', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'review', dueDate: '2026-01-06', type: 'manual', estTime: 2, actualTime: null, createdAt: '2026-01-04' },
+  { id: 'k10', title: 'Follow up on rebar delivery', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'waiting', dueDate: '2026-01-10', expectedArrival: '2026-01-09', type: 'manual', estTime: 0.5, actualTime: null, createdAt: '2026-01-03' },
   // Done tasks for Patrick
-  { id: 'k11', title: 'Review Q4 budget allocation', assignedTo: 1, column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 2, actualTime: 2.5, createdAt: '2026-01-01', completedAt: '2026-01-03' },
-  { id: 'k12', title: 'Sign contractor agreements', assignedTo: 1, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 1, actualTime: 1, createdAt: '2026-01-02', completedAt: '2026-01-04' },
-  { id: 'k13', title: 'Approve villa 3 foundation plan', assignedTo: 1, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1.5, actualTime: 1, createdAt: '2026-01-03', completedAt: '2026-01-05' },
+  { id: 'k11', title: 'Review Q4 budget allocation', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 2, actualTime: 2.5, createdAt: '2026-01-01', completedAt: '2026-01-03' },
+  { id: 'k12', title: 'Sign contractor agreements', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 1, actualTime: 1, createdAt: '2026-01-02', completedAt: '2026-01-04' },
+  { id: 'k13', title: 'Approve villa 3 foundation plan', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1.5, actualTime: 1, createdAt: '2026-01-03', completedAt: '2026-01-05' },
   // Done tasks for David
-  { id: 'k14', title: 'Site inspection - Villa 3', assignedTo: 2, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 2, actualTime: 2, createdAt: '2026-01-02', completedAt: '2026-01-04' },
-  { id: 'k15', title: 'Update worker schedule', assignedTo: 2, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1, actualTime: 0.5, createdAt: '2026-01-04', completedAt: '2026-01-05' },
-  { id: 'k16', title: 'QA - Base foundation formwork', assignedTo: 2, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1.5, actualTime: 1.5, createdAt: '2026-01-03', completedAt: '2026-01-05' },
+  { id: 'k14', title: 'Site inspection - Villa 3', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 2, actualTime: 2, createdAt: '2026-01-02', completedAt: '2026-01-04' },
+  { id: 'k15', title: 'Update worker schedule', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1, actualTime: 0.5, createdAt: '2026-01-04', completedAt: '2026-01-05' },
+  { id: 'k16', title: 'QA - Base foundation formwork', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1.5, actualTime: 1.5, createdAt: '2026-01-03', completedAt: '2026-01-05' },
   // Done tasks for Jean
-  { id: 'k17', title: 'Contact cement suppliers', assignedTo: 3, column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 1.5, actualTime: 2, createdAt: '2026-01-01', completedAt: '2026-01-03' },
-  { id: 'k18', title: 'Process invoice #2341', assignedTo: 3, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 0.5, actualTime: 0.5, createdAt: '2026-01-03', completedAt: '2026-01-04' },
-  { id: 'k19', title: 'Negotiate rebar pricing', assignedTo: 3, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 2, actualTime: 3, createdAt: '2026-01-02', completedAt: '2026-01-05' },
+  { id: 'k17', title: 'Contact cement suppliers', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 1.5, actualTime: 2, createdAt: '2026-01-01', completedAt: '2026-01-03' },
+  { id: 'k18', title: 'Process invoice #2341', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 0.5, actualTime: 0.5, createdAt: '2026-01-03', completedAt: '2026-01-04' },
+  { id: 'k19', title: 'Negotiate rebar pricing', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 2, actualTime: 3, createdAt: '2026-01-02', completedAt: '2026-01-05' },
   // Done tasks for Ball
-  { id: 'k20', title: 'Inventory count - tools', assignedTo: 4, column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 1, actualTime: 1.5, createdAt: '2026-01-02', completedAt: '2026-01-03' },
-  { id: 'k21', title: 'Order PPE equipment', assignedTo: 4, column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 0.5, actualTime: 0.5, createdAt: '2026-01-03', completedAt: '2026-01-04' },
-  { id: 'k22', title: 'Track delivery - formwork materials', assignedTo: 4, column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1, actualTime: 1, createdAt: '2026-01-04', completedAt: '2026-01-05' },
+  { id: 'k20', title: 'Inventory count - tools', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'done', dueDate: '2026-01-03', type: 'manual', estTime: 1, actualTime: 1.5, createdAt: '2026-01-02', completedAt: '2026-01-03' },
+  { id: 'k21', title: 'Order PPE equipment', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'done', dueDate: '2026-01-04', type: 'manual', estTime: 0.5, actualTime: 0.5, createdAt: '2026-01-03', completedAt: '2026-01-04' },
+  { id: 'k22', title: 'Track delivery - formwork materials', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', column: 'done', dueDate: '2026-01-05', type: 'manual', estTime: 1, actualTime: 1, createdAt: '2026-01-04', completedAt: '2026-01-05' },
 ];
 
 const initialRecurringTasks = [
-  { id: 'r1', title: 'Daily safety inspection', assignedTo: 3, frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
-  { id: 'r2', title: 'Weekly team standup', assignedTo: 1, frequency: 'weekly', days: ['Monday'], specificDates: [], estTime: 1, createdAt: '2026-01-01' },
-  { id: 'r3', title: 'Monthly inventory check', assignedTo: 4, frequency: 'monthly', days: ['1'], specificDates: [], estTime: 2, createdAt: '2026-01-01' },
-  { id: 'r4', title: 'Quarterly safety audit', assignedTo: 2, frequency: 'specific', days: [], specificDates: ['2026-03-01', '2026-06-01', '2026-09-01', '2026-12-01'], estTime: 4, createdAt: '2026-01-01' },
-  { id: 'r5', title: 'Daily inbox zero & emails', assignedTo: 3, frequency: 'daily', days: [], specificDates: [], estTime: 1, createdAt: '2026-01-01' },
-  { id: 'r6', title: 'Check supplier status updates', assignedTo: 4, frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
+  { id: 'r1', title: 'Daily safety inspection', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
+  { id: 'r2', title: 'Weekly team standup', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', frequency: 'weekly', days: ['Monday'], specificDates: [], estTime: 1, createdAt: '2026-01-01' },
+  { id: 'r3', title: 'Monthly inventory check', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', frequency: 'monthly', days: ['1'], specificDates: [], estTime: 2, createdAt: '2026-01-01' },
+  { id: 'r4', title: 'Quarterly safety audit', assignedTo: '0b5466d5-4410-47e3-af90-255fdac0ab3d', frequency: 'specific', days: [], specificDates: ['2026-03-01', '2026-06-01', '2026-09-01', '2026-12-01'], estTime: 4, createdAt: '2026-01-01' },
+  { id: 'r5', title: 'Daily inbox zero & emails', assignedTo: 'dea87da8-6f1b-4f7b-bc3e-e62a6f15a962', frequency: 'daily', days: [], specificDates: [], estTime: 1, createdAt: '2026-01-01' },
+  { id: 'r6', title: 'Check supplier status updates', assignedTo: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', frequency: 'daily', days: [], specificDates: [], estTime: 0.5, createdAt: '2026-01-01' },
 ];
 
 // Generate recurring task instances for the last 7 days
@@ -110,12 +110,12 @@ const generateRecurringTaskInstances = () => {
 const generatedRecurringTasks = generateRecurringTaskInstances();
 
 const initialComments = {
-  1: [{ id: 1, taskId: 1, userId: 4, text: 'Re-bar delivery confirmed', timestamp: '2026-01-04T09:30:00', mentions: [] }, { id: 2, taskId: 1, userId: 1, text: 'Great, crew ready by 7am', timestamp: '2026-01-04T10:15:00', mentions: [] }],
-  5: [{ id: 3, taskId: 5, userId: 2, text: 'Need concrete mix specs', timestamp: '2026-01-03T14:00:00', mentions: [] }],
-  8: [{ id: 4, taskId: 8, userId: 3, text: 'Waiting on brick supplier', timestamp: '2026-01-02T11:00:00', mentions: [] }, { id: 5, taskId: 8, userId: 4, text: '@Patrick backup supplier contact', timestamp: '2026-01-02T14:30:00', mentions: [1] }],
+  1: [{ id: 1, taskId: 1, userId: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', text: 'Re-bar delivery confirmed', timestamp: '2026-01-04T09:30:00', mentions: [] }, { id: 2, taskId: 1, userId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', text: 'Great, crew ready by 7am', timestamp: '2026-01-04T10:15:00', mentions: [] }],
+  5: [{ id: 3, taskId: 5, userId: '0b5466d5-4410-47e3-af90-255fdac0ab3d', text: 'Need concrete mix specs', timestamp: '2026-01-03T14:00:00', mentions: [] }],
+  8: [{ id: 4, taskId: 8, userId: 3, text: 'Waiting on brick supplier', timestamp: '2026-01-02T11:00:00', mentions: [] }, { id: 5, taskId: 8, userId: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', text: '@Patrick backup supplier contact', timestamp: '2026-01-02T14:30:00', mentions: [1] }],
 };
 
-const initialNotifications = [{ id: 1, userId: 1, fromUserId: 4, taskId: 8, text: 'Ball mentioned you in a comment', timestamp: '2026-01-02T14:30:00', read: false }];
+const initialNotifications = [{ id: 1, userId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', fromUserId: 'a67cb7c7-a690-417b-bdb7-e9f04ab05a31', taskId: 8, text: 'Ball mentioned you in a comment', timestamp: '2026-01-02T14:30:00', read: false }];
 
 const initialBuildingTasks = [
   { id: 1, order: 1, villa: 'Villa 3', mainCategory: '2 Foundation', subCategory: 'Base Foundation (incl columns)', task: 'Re-Bar', step: 'Prefab Re-Bar', notes: '', status: 'Done', expectedArrival: '', earliestStart: '2026-01-01', skilledWorkers: ['zin'], unskilledWorkers: ['Tun Sein Maung'], duration: '' },
@@ -146,6 +146,7 @@ const initialOptions = {
   mainCategory: ['1 Site Prep', '2 Foundation', '3 Structure', '4 Roofing', '5 MEP', '6 Finishes', 'Landscaping', 'Infrastructure'],
   subCategory: { '2 Foundation': ['Base Foundation (incl columns)', 'Strip Foundation', 'Plumbing', 'Main Slab Foundation'], '3 Structure': ['Columns', 'Beams', 'Walls', 'Slabs'], 'Landscaping': ['Garden', 'Trees', 'Irrigation'], 'Infrastructure': ['Pathways', 'Drainage', 'Lighting'] },
   task: { 'Base Foundation (incl columns)': ['Formwork', 'Re-Bar', 'Concrete'], 'Strip Foundation': ['Brick Work', 'Concrete', 'Plinch-Beam', 'Formwork'], 'Plumbing': ['Rough-in', 'Connections', 'Testing'], 'Garden': ['Preparation', 'Planting', 'Mulching'], 'Pathways': ['Groundwork', 'Base Layer', 'Surface'], 'Drainage': ['Main Drains', 'Connections', 'Testing'] },
+  step: { 'Base Foundation (incl columns)': ['Prefab Re-Bar', 'Set up Formwork', 'Set Re-Bar Inside Formwork', 'Brace Formwork', 'Concrete Pour', 'Concrete Dry', 'Formwork removal'], 'Strip Foundation': ['Brick Laying', 'Concrete Pouring', 'Strip wall pour'], 'Garden': ['Clear vegetation', 'Soil preparation'] },
   skilledWorker: ['zin', 'Joshua', 'zaw', 'diesel', 'San Shwe'],
   unskilledWorker: ['Tun Sein Maung', 'Sone', 'Min Pyea', 'Thein Win']
 };
@@ -178,12 +179,23 @@ const getReadiness = (task, categoryTasks, index) => {
     if (predStatus.includes('Supply Chain Pending')) return { type: 'blocked-upstream', label: 'Upstream Blocked', color: '#f97316', bg: '#fff7ed', icon: '↑' };
     return { type: 'sequenced', label: '', color: '#9ca3af', bg: 'transparent', icon: '' };
   }
-  if (status === 'Ready to start (Supply Chain confirmed on-site)') return { type: 'ready', label: 'Ready Now', color: '#16a34a', bg: '#f0fdf4', icon: '●' };
+  // Handle both new and legacy ready statuses
+  if (status === 'Ready to start (Supply Chain confirmed on-site)' || status === 'Ready') return { type: 'ready', label: 'Ready Now', color: '#16a34a', bg: '#f0fdf4', icon: '●' };
   return { type: 'sequenced', label: '', color: '#9ca3af', bg: 'transparent', icon: '' };
 };
 
 const getStatusStyle = (status) => {
-  const styles = { 'Done': { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', dot: '#16a34a' }, 'In Progress': { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', dot: '#7c3aed' }, 'Ready to start (Supply Chain confirmed on-site)': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' }, 'Supply Chain Arrived to be Confirmed': { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', dot: '#0ea5e9' }, 'Supply Chain Pending Order': { bg: 'rgba(220,38,38,0.1)', color: '#dc2626', dot: '#dc2626' }, 'Supply Chain Pending Arrival': { bg: 'rgba(217,119,6,0.1)', color: '#d97706', dot: '#d97706' }, 'Blocked': { bg: 'rgba(107,114,128,0.1)', color: '#6b7280', dot: '#6b7280' }, 'On Hold': { bg: 'rgba(156,163,175,0.1)', color: '#9ca3af', dot: '#9ca3af' } };
+  const styles = { 
+    'Done': { bg: 'rgba(22,163,74,0.1)', color: '#16a34a', dot: '#16a34a' }, 
+    'In Progress': { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed', dot: '#7c3aed' }, 
+    'Ready to start (Supply Chain confirmed on-site)': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' }, 
+    'Ready': { bg: 'rgba(5,150,105,0.1)', color: '#059669', dot: '#059669' }, // Legacy support
+    'Supply Chain Arrived to be Confirmed': { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9', dot: '#0ea5e9' }, 
+    'Supply Chain Pending Order': { bg: 'rgba(220,38,38,0.1)', color: '#dc2626', dot: '#dc2626' }, 
+    'Supply Chain Pending Arrival': { bg: 'rgba(217,119,6,0.1)', color: '#d97706', dot: '#d97706' }, 
+    'Blocked': { bg: 'rgba(107,114,128,0.1)', color: '#6b7280', dot: '#6b7280' }, 
+    'On Hold': { bg: 'rgba(156,163,175,0.1)', color: '#9ca3af', dot: '#9ca3af' } 
+  };
   return styles[status] || { bg: '#f3f4f6', color: '#6b7280', dot: '#9ca3af' };
 };
 
@@ -218,6 +230,9 @@ const Icon = ({ name, size = 20 }) => {
     check: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>,
     edit: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>,
     copy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>,
+    bug: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3.003 3.003 0 116 0v1" /><path d="M12 20c-3.3 0-6-2.7-6-6v-3a6 6 0 0112 0v3c0 3.3-2.7 6-6 6z" /><path d="M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M17.47 9c1.93-.2 3.53-1.9 3.53-4M18 13h4M21 21c0-2.1-1.7-3.9-3.8-4" /></svg>,
+    image: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>,
+    info: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>,
   };
   return icons[name] || null;
 };
@@ -232,9 +247,12 @@ const LoginScreen = ({ onDemoLogin }) => (
         <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginTop: '4px' }}>Sustainable Development</p>
       </div>
       <SignIn routing="hash" />
-      <div style={{ marginTop: '20px' }}>
-        <button type="button" onClick={onDemoLogin} style={{ padding: '12px 24px', background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', backdropFilter: 'blur(4px)' }}>
+      <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+        <button type="button" onClick={() => onDemoLogin('patrick')} style={{ padding: '12px 24px', background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', backdropFilter: 'blur(4px)', minWidth: '220px' }}>
           Demo Login (Patrick - Admin)
+        </button>
+        <button type="button" onClick={() => onDemoLogin('david')} style={{ padding: '12px 24px', background: 'rgba(14,165,233,0.3)', color: '#fff', border: '1px solid rgba(14,165,233,0.5)', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', backdropFilter: 'blur(4px)', minWidth: '220px' }}>
+          Demo Login (David - Manager)
         </button>
       </div>
     </div>
@@ -303,7 +321,7 @@ const NotificationsPanel = ({ notifications, setNotifications, users, onClose, o
 );
 
 // ============ KANBAN ============
-const KanbanColumn = ({ id, title, tasks, onDrop, onDragOver, users, onTaskClick, onDragStart, dragOverColumn, dragOverTaskId, setDragOverTaskId, currentUserId, onQuickMove, columns }) => {
+const KanbanColumn = ({ id, title, tasks, onDrop, onDragOver, users, onTaskClick, onDragStart, dragOverColumn, dragOverTaskId, setDragOverTaskId, currentUserId, onQuickMove, columns, onAddTask }) => {
   const totalHours = tasks.reduce((sum, t) => sum + (t.estTime || 0), 0);
   return (
     <div onDragOver={(e) => { e.preventDefault(); onDragOver(id); }} onDrop={(e) => { e.preventDefault(); onDrop(id); }} style={{ flex: '0 0 280px', minWidth: '280px', background: dragOverColumn === id ? 'rgba(5,150,105,0.05)' : '#f9fafb', borderRadius: '12px', padding: '12px', border: dragOverColumn === id ? '2px dashed #059669' : '2px solid transparent' }}>
@@ -312,7 +330,10 @@ const KanbanColumn = ({ id, title, tasks, onDrop, onDragOver, users, onTaskClick
           <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', margin: 0 }}>{title}</h3>
           {totalHours > 0 && <span style={{ fontSize: '11px', color: '#059669', background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>{totalHours}h</span>}
         </div>
-        <span style={{ fontSize: '12px', color: '#9ca3af', background: '#fff', padding: '2px 8px', borderRadius: '10px' }}>{tasks.length}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button type="button" onClick={() => onAddTask(id)} title="Add task to this column" style={{ width: '22px', height: '22px', padding: 0, background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669' }}>+</button>
+          <span style={{ fontSize: '12px', color: '#9ca3af', background: '#fff', padding: '2px 8px', borderRadius: '10px' }}>{tasks.length}</span>
+        </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '100px' }}>
         {tasks.map(task => {
@@ -403,7 +424,11 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
         <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Title</label><input value={form.title || ''} onChange={e => setForm({ ...form, title: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
           <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Due Date</label><input type="date" value={form.dueDate || ''} onChange={e => setForm({ ...form, dueDate: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
-          <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Assigned To</label><select value={form.assignedTo || ''} onChange={e => setForm({ ...form, assignedTo: Number(e.target.value) })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>{users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div>
+          <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Assigned To</label><select value={form.assignedTo || ''} onChange={e => setForm({ ...form, assignedTo: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>{users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Column</label><select value={form.column || 'today'} onChange={e => setForm({ ...form, column: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}><option value="today">Today</option><option value="thisWeek">This Week</option><option value="waiting">Waiting</option><option value="review">To Be Reviewed</option><option value="later">Later</option></select></div>
+          <div />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
           <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Est. Time (hours)</label><input type="number" step="0.5" min="0" value={form.estTime || ''} onChange={e => setForm({ ...form, estTime: parseFloat(e.target.value) || 0 })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
@@ -453,7 +478,7 @@ const TaskModal = ({ task, onClose, onUpdate, onDelete, users, buildingTasks, co
 };
 
 const RecurringTaskModal = ({ task, onClose, onSave, onDelete, onArchive, users, comments, setComments, currentUser, setNotifications }) => {
-  const [form, setForm] = useState(task || { title: '', assignedTo: 1, frequency: 'daily', days: [], specificDates: [], estTime: 1, notes: '', status: 'active' });
+  const [form, setForm] = useState(task || { title: '', assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', frequency: 'daily', days: [], specificDates: [], estTime: 1, notes: '', status: 'active' });
   const [newComment, setNewComment] = useState('');
   const toggleDay = (day) => setForm(f => ({ ...f, days: f.days.includes(day) ? f.days.filter(d => d !== day) : [...f.days, day] }));
 
@@ -500,7 +525,7 @@ const RecurringTaskModal = ({ task, onClose, onSave, onDelete, onArchive, users,
           <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Title</label><input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-            <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Assigned To</label><select value={form.assignedTo} onChange={e => setForm({ ...form, assignedTo: Number(e.target.value) })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>{users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div>
+            <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Assigned To</label><select value={form.assignedTo} onChange={e => setForm({ ...form, assignedTo: e.target.value })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}>{users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}</select></div>
             <div><label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '6px' }}>Est. Time (hours)</label><input type="number" step="0.5" min="0" value={form.estTime || ''} onChange={e => setForm({ ...form, estTime: parseFloat(e.target.value) || 0 })} style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} /></div>
           </div>
 
@@ -568,7 +593,7 @@ const AddPhaseModal = ({ isOpen, onClose, onAdd, villa, options }) => {
     if (phaseName.trim()) {
       const name = phaseName.trim();
       // Use first category as default, or "General" if none
-      const mainCat = options.mainCategory[0] || 'General';
+      const mainCat = (options.mainCategory || [])[0] || 'General';
       onAdd({ mainCat, subCat: name });
       setAddedPhases(prev => [...prev, name]);
       setPhaseName('');
@@ -1006,11 +1031,28 @@ const PendingReviewModal = ({ change, onClose, onApprove, onReject, onComment, u
 };
 
 // ============ BUILDING SEQUENCE COMPONENTS ============
-const Dropdown = ({ value, options, onChange, placeholder, allowNew, onAddNew }) => {
+const Dropdown = ({ value, options, onChange, placeholder, allowNew, onAddNew, disabled }) => {
   const [open, setOpen] = useState(false);
   const [newValue, setNewValue] = useState('');
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const ref = useRef(null);
-  useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
+  const buttonRef = useRef(null);
+  
+  useEffect(() => { 
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; 
+    document.addEventListener('mousedown', h); 
+    return () => document.removeEventListener('mousedown', h); 
+  }, []);
+  
+  const handleOpen = () => {
+    if (disabled) return;
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 2, left: rect.left, width: Math.max(rect.width, 180) });
+    }
+    setOpen(!open);
+  };
+  
   const handleAddNew = () => {
     if (newValue.trim() && onAddNew) {
       onAddNew(newValue.trim());
@@ -1020,12 +1062,11 @@ const Dropdown = ({ value, options, onChange, placeholder, allowNew, onAddNew })
   };
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <button type="button" onClick={() => setOpen(!open)} style={{ width: '100%', padding: '6px 10px', fontSize: '13px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', textAlign: 'left', cursor: 'pointer', color: value ? '#1f2937' : '#9ca3af' }}>{value || placeholder}</button>
-      {open && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '220px', overflowY: 'auto', minWidth: '150px' }}>
-          {options.map((o, i) => <div key={i} onClick={() => { onChange(o); setOpen(false); }} style={{ padding: '8px 12px', cursor: 'pointer', background: o === value ? '#f3f4f6' : 'transparent', fontSize: '13px' }}>{o}</div>)}
+      <button ref={buttonRef} type="button" onClick={handleOpen} style={{ width: '100%', padding: '6px 10px', fontSize: '13px', background: disabled ? '#f9fafb' : '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', textAlign: 'left', cursor: disabled ? 'not-allowed' : 'pointer', color: value ? (disabled ? '#9ca3af' : '#1f2937') : '#9ca3af', opacity: disabled ? 0.7 : 1 }}>{value || placeholder}</button>
+      {open && !disabled && (
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', zIndex: 9999, maxHeight: '280px', overflowY: 'auto' }}>
           {allowNew && (
-            <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px' }}>
+            <div style={{ borderBottom: '1px solid #e5e7eb', padding: '8px', background: '#f9fafb', position: 'sticky', top: 0 }}>
               <input
                 value={newValue}
                 onChange={e => setNewValue(e.target.value)}
@@ -1033,69 +1074,290 @@ const Dropdown = ({ value, options, onChange, placeholder, allowNew, onAddNew })
                 placeholder="Type new..."
                 style={{ width: '100%', padding: '6px 8px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box' }}
                 onClick={e => e.stopPropagation()}
+                autoFocus
               />
               {newValue.trim() && (
                 <button type="button" onClick={handleAddNew} style={{ width: '100%', marginTop: '4px', padding: '4px', background: '#059669', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Add "{newValue}"</button>
               )}
             </div>
           )}
+          {options.length === 0 && !allowNew && <div style={{ padding: '12px', color: '#9ca3af', fontSize: '12px', textAlign: 'center' }}>No options</div>}
+          {options.map((o, i) => <div key={i} onClick={() => { onChange(o); setOpen(false); }} style={{ padding: '10px 12px', cursor: 'pointer', background: o === value ? '#ecfdf5' : 'transparent', fontSize: '13px', borderBottom: i < options.length - 1 ? '1px solid #f3f4f6' : 'none' }}>{o}</div>)}
         </div>
       )}
     </div>
   );
 };
 
-const StatusDropdown = ({ value, options, onChange }) => { const [open, setOpen] = useState(false); const ref = useRef(null); const style = getStatusStyle(value); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); const short = s => s === 'Ready to start (Supply Chain confirmed on-site)' ? 'Ready' : s === 'Supply Chain Arrived to be Confirmed' ? 'SC Arrived' : (s || 'Set status').replace('Supply Chain Pending', 'SC'); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', fontSize: '12px', fontWeight: '500', background: style.bg, border: 'none', borderRadius: '6px', color: style.color, cursor: 'pointer', whiteSpace: 'nowrap' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: style.dot }} />{short(value)}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, minWidth: '260px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100 }}>{options.map((o, i) => { const s = getStatusStyle(o); return <div key={i} onClick={() => { onChange(o); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.dot }} />{o}</div>; })}</div>}</div>); };
+const StatusDropdown = ({ value, options, onChange }) => { const [open, setOpen] = useState(false); const ref = useRef(null); const style = getStatusStyle(value); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); const short = s => s === 'Ready to start (Supply Chain confirmed on-site)' ? 'Ready to start' : s === 'Supply Chain Arrived to be Confirmed' ? 'SC Arrived' : (s || 'Set status').replace('Supply Chain Pending', 'SC'); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', fontSize: '12px', fontWeight: '500', background: style.bg, border: 'none', borderRadius: '6px', color: style.color, cursor: 'pointer', whiteSpace: 'nowrap' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: style.dot }} />{short(value)}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, minWidth: '260px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100 }}>{options.map((o, i) => { const s = getStatusStyle(o); return <div key={i} onClick={() => { onChange(o); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.dot }} />{o}</div>; })}</div>}</div>); };
 
-const EditableCell = ({ value, onChange, placeholder }) => { const [editing, setEditing] = useState(false); const [temp, setTemp] = useState(value); const ref = useRef(null); useEffect(() => { if (editing && ref.current) ref.current.focus(); }, [editing]); if (editing) return <input ref={ref} value={temp} onChange={e => setTemp(e.target.value)} onBlur={() => { setEditing(false); onChange(temp); }} onKeyDown={e => e.key === 'Enter' && (setEditing(false), onChange(temp))} style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #059669', borderRadius: '6px', boxSizing: 'border-box' }} />; return <div onClick={() => { setTemp(value); setEditing(true); }} style={{ padding: '6px', fontSize: '13px', color: value ? '#1f2937' : '#9ca3af', cursor: 'text', minHeight: '28px' }}>{value || placeholder}</div>; };
+const EditableCell = ({ value, onChange, placeholder, disabled }) => { const [editing, setEditing] = useState(false); const [temp, setTemp] = useState(value); const ref = useRef(null); useEffect(() => { if (editing && ref.current) ref.current.focus(); }, [editing]); if (editing && !disabled) return <input ref={ref} value={temp} onChange={e => setTemp(e.target.value)} onBlur={() => { setEditing(false); onChange(temp); }} onKeyDown={e => e.key === 'Enter' && (setEditing(false), onChange(temp))} style={{ width: '100%', padding: '6px', fontSize: '13px', border: '1px solid #059669', borderRadius: '6px', boxSizing: 'border-box' }} />; return <div onClick={() => { if (!disabled) { setTemp(value); setEditing(true); } }} style={{ padding: '6px', fontSize: '13px', color: value ? (disabled ? '#9ca3af' : '#1f2937') : '#9ca3af', cursor: disabled ? 'not-allowed' : 'text', minHeight: '28px', opacity: disabled ? 0.7 : 1 }}>{value || placeholder}</div>; };
+
+// Component for showing a pending field edit with approve/reject buttons
+const PendingField = ({ pending, displayValue, oldValue, onApprove, onReject, isAdmin, isOwn, onEdit, editComponent }) => {
+  const formatOldValue = (val) => {
+    if (val === undefined || val === null || val === '') return '(empty)';
+    if (Array.isArray(val)) return val.length ? val.join(', ') : '(none)';
+    return val;
+  };
+  // If owner wants to edit, show the edit component instead
+  if (isOwn && editComponent) {
+    return (
+      <div style={{ position: 'relative' }}>
+        <div style={{ border: '2px solid #9333ea', borderRadius: '6px', background: 'rgba(147,51,234,0.05)' }}>
+          {editComponent}
+        </div>
+        <span style={{ fontSize: '9px', color: '#9333ea', display: 'block', marginTop: '2px' }}>Pending</span>
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      {isAdmin && (
+        <div style={{ fontSize: '10px', color: '#9ca3af', textDecoration: 'line-through', marginBottom: '2px' }}>
+          Was: {formatOldValue(oldValue)}
+        </div>
+      )}
+      <div style={{ padding: '6px', border: '2px solid #9333ea', borderRadius: '6px', fontSize: '12px', background: 'rgba(147,51,234,0.1)', minWidth: '60px' }}>{displayValue || '(empty)'}</div>
+      {isAdmin && <div style={{ display: 'flex', gap: '2px' }}><button type="button" onClick={onApprove} style={{ padding: '2px 6px', background: '#059669', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>✓</button><button type="button" onClick={onReject} style={{ padding: '2px 6px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>✗</button></div>}
+      {!isAdmin && isOwn && <span style={{ fontSize: '9px', color: '#9333ea' }}>Pending</span>}
+    </div>
+  );
+};
 
 const MultiSelect = ({ values = [], options, onChange, placeholder }) => { const [open, setOpen] = useState(false); const ref = useRef(null); useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []); const toggle = (opt) => onChange(values.includes(opt) ? values.filter(v => v !== opt) : [...values, opt]); return (<div ref={ref} style={{ position: 'relative' }}><button type="button" onClick={() => setOpen(!open)} style={{ width: '100%', padding: '6px 10px', fontSize: '12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', textAlign: 'left', cursor: 'pointer', color: values.length ? '#1f2937' : '#9ca3af', minHeight: '32px' }}>{values.length ? values.join(', ') : placeholder}</button>{open && <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '200px', overflowY: 'auto' }}><div onClick={() => onChange([])} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #e5e7eb', color: '#dc2626', fontSize: '12px' }}>Clear all</div>{options.map((o, i) => <div key={i} onClick={() => toggle(o)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', cursor: 'pointer', background: values.includes(o) ? '#ecfdf5' : 'transparent' }}><span style={{ width: '16px', height: '16px', border: values.includes(o) ? '2px solid #059669' : '1px solid #d1d5db', borderRadius: '4px', background: values.includes(o) ? '#059669' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px' }}>{values.includes(o) && '✓'}</span>{o}</div>)}</div>}</div>); };
 
 // ============ MAIN APP ============
-// LocalStorage helpers (fallback when Supabase not available)
-const STORAGE_KEY = 'santi_management_data';
+// NO LOCALSTORAGE - Everything is saved to Supabase only
 
-const loadFromStorage = () => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : null;
-  } catch (e) {
-    console.error('Error loading from localStorage:', e);
-    return null;
-  }
+// ============ SYNC STATUS INDICATOR ============
+const SyncStatusIndicator = ({ status, lastSaved, onRetry }) => {
+  const getStatusDisplay = () => {
+    switch (status) {
+      case 'saved':
+        return { icon: '☁️', text: 'Saved', color: '#059669', bg: 'rgba(5,150,105,0.1)' };
+      case 'saving':
+        return { icon: '🔄', text: 'Saving...', color: '#d97706', bg: 'rgba(217,119,6,0.1)' };
+      case 'error':
+        return { icon: '⚠️', text: 'NOT SAVED!', color: '#dc2626', bg: 'rgba(220,38,38,0.1)' };
+      case 'checking':
+        return { icon: '🔄', text: 'Connecting...', color: '#6b7280', bg: 'rgba(107,114,128,0.1)' };
+      default:
+        return { icon: '☁️', text: 'Synced', color: '#059669', bg: 'rgba(5,150,105,0.1)' };
+    }
+  };
+  
+  const display = getStatusDisplay();
+  
+  return (
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '6px', 
+      padding: '4px 10px', 
+      background: display.bg, 
+      borderRadius: '6px',
+      fontSize: '12px',
+      fontWeight: '500',
+      color: display.color,
+      cursor: status === 'error' ? 'pointer' : 'default'
+    }} onClick={status === 'error' ? onRetry : undefined} title={status === 'error' ? 'Click to retry' : lastSaved ? `Last saved: ${new Date(lastSaved).toLocaleTimeString()}` : ''}>
+      <span>{display.icon}</span>
+      <span>{display.text}</span>
+    </div>
+  );
 };
 
-const saveToStorage = (data) => {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.error('Error saving to localStorage:', e);
-  }
+// ============ BLOCKING OVERLAY (when save fails) ============
+const ConnectionBlockingOverlay = ({ error, onRetry, onCopyBackup, isRetrying }) => {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.85)',
+      zIndex: 99999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'column',
+      padding: '20px'
+    }}>
+      <div style={{
+        background: '#fff',
+        borderRadius: '16px',
+        padding: '40px',
+        maxWidth: '500px',
+        width: '100%',
+        textAlign: 'center',
+        boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
+      }}>
+        <div style={{ fontSize: '64px', marginBottom: '20px' }}>⚠️</div>
+        <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#dc2626', marginBottom: '12px' }}>
+          Connection Lost
+        </h2>
+        <p style={{ fontSize: '16px', color: '#4b5563', marginBottom: '8px' }}>
+          Your work is <strong>NOT being saved</strong> to the database!
+        </p>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
+          Do not continue working until the connection is restored.
+        </p>
+        
+        {error && (
+          <div style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '24px',
+            fontSize: '13px',
+            color: '#991b1b',
+            textAlign: 'left'
+          }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+        
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={onRetry}
+            disabled={isRetrying}
+            style={{
+              padding: '12px 24px',
+              background: isRetrying ? '#9ca3af' : '#059669',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: isRetrying ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            {isRetrying ? '🔄 Retrying...' : '🔄 Retry Connection'}
+          </button>
+          
+          <button
+            onClick={onCopyBackup}
+            style={{
+              padding: '12px 24px',
+              background: '#f3f4f6',
+              color: '#374151',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            📋 Copy Data Backup
+          </button>
+        </div>
+        
+        <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '20px' }}>
+          If this persists, contact support or check your internet connection.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ============ INITIAL CONNECTION FAILED SCREEN ============
+const ConnectionFailedScreen = ({ error, onRetry, isRetrying }) => {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'column',
+      background: 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%)',
+      padding: '20px'
+    }}>
+      <div style={{
+        background: '#fff',
+        borderRadius: '16px',
+        padding: '40px',
+        maxWidth: '500px',
+        width: '100%',
+        textAlign: 'center',
+        boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
+      }}>
+        <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔌</div>
+        <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#dc2626', marginBottom: '12px' }}>
+          Cannot Connect to Database
+        </h2>
+        <p style={{ fontSize: '16px', color: '#4b5563', marginBottom: '24px' }}>
+          Unable to establish a connection to the database. Please check your internet connection and try again.
+        </p>
+        
+        {error && (
+          <div style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '24px',
+            fontSize: '13px',
+            color: '#991b1b',
+            textAlign: 'left'
+          }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+        
+        <button
+          onClick={onRetry}
+          disabled={isRetrying}
+          style={{
+            padding: '14px 32px',
+            background: isRetrying ? '#9ca3af' : '#059669',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: isRetrying ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {isRetrying ? '🔄 Connecting...' : '🔄 Retry Connection'}
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default function Home() {
   const { isLoaded, isSignedIn, user: clerkUser } = useUser();
   const [users, setUsers] = useState(mockUsers);
-  const [demoMode, setDemoMode] = useState(false);
+  const [demoMode, setDemoMode] = useState(null); // null, 'patrick', or 'david'
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [supabaseLoading, setSupabaseLoading] = useState(true);
-  const [supabaseError, setSupabaseError] = useState(null);
+  
+  // Sync status: 'checking' | 'connected' | 'saving' | 'saved' | 'error'
+  const [syncStatus, setSyncStatus] = useState('checking');
+  const [syncError, setSyncError] = useState(null);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [initialLoadFailed, setInitialLoadFailed] = useState(false);
+  
   const saveTimeoutRef = useRef(null);
 
-  // Load saved data from localStorage initially (will be overwritten by Supabase if available)
-  const [savedData] = useState(() => loadFromStorage());
-
-  const [buildingTasks, setBuildingTasks] = useState(() => savedData?.buildingTasks || initialBuildingTasks);
-  const [kanbanTasks, setKanbanTasks] = useState(() => savedData?.kanbanTasks || [...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
-  const [recurringTasks, setRecurringTasks] = useState(() => savedData?.recurringTasks || initialRecurringTasks);
-  const [comments, setComments] = useState(() => savedData?.comments || initialComments);
-  const [notifications, setNotifications] = useState(() => savedData?.notifications || initialNotifications);
-  const [options, setOptions] = useState(() => savedData?.options || initialOptions);
-  const [workforce, setWorkforce] = useState(() => savedData?.workforce || initialWorkforce);
-  const [orderItems, setOrderItems] = useState(() => savedData?.orderItems || []);
-  const [buildingSequences, setBuildingSequences] = useState(() => savedData?.buildingSequences || {
+  // State starts with initial values, will be populated from Supabase
+  const [buildingTasks, setBuildingTasks] = useState(initialBuildingTasks);
+  const [kanbanTasks, setKanbanTasks] = useState([...initialKanbanTasks, ...initialSCTasks, ...generatedRecurringTasks]);
+  const [recurringTasks, setRecurringTasks] = useState(initialRecurringTasks);
+  const [comments, setComments] = useState(initialComments);
+  const [notifications, setNotifications] = useState(initialNotifications);
+  const [options, setOptions] = useState(initialOptions);
+  const [workforce, setWorkforce] = useState(initialWorkforce);
+  const [buildingSequences, setBuildingSequences] = useState({
     standalone: [
       { id: 'villa3', label: 'Villa 3', starred: true, archived: false },
       { id: 'villa2', label: 'Villa 2', starred: false, archived: false },
@@ -1129,6 +1391,30 @@ export default function Home() {
   const [showArchived, setShowArchived] = useState(false);
   const [showArchivedRecurring, setShowArchivedRecurring] = useState(false);
   const [pendingChanges, setPendingChanges] = useState([]);
+  const [bugReports, setBugReports] = useState([]);
+  const [bugReportModal, setBugReportModal] = useState(null);
+  
+  // Global paste handler for bug report modal
+  useEffect(() => {
+    if (!bugReportModal) return;
+    const handlePaste = (e) => {
+      if (bugReportModal.screenshot) return; // Already has screenshot
+      const items = e.clipboardData?.items;
+      for (let i = 0; i < items?.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const blob = items[i].getAsFile();
+          const reader = new FileReader();
+          reader.onload = (event) => setBugReportModal(prev => prev ? { ...prev, screenshot: event.target.result } : null);
+          reader.readAsDataURL(blob);
+          e.preventDefault();
+          break;
+        }
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [bugReportModal]);
+  
   const [pendingReviewModal, setPendingReviewModal] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
@@ -1137,10 +1423,12 @@ export default function Home() {
   const [activeComments, setActiveComments] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [draggedRow, setDraggedRow] = useState(null);
+  const [draggedPhase, setDraggedPhase] = useState(null);
+  const [dragOverPhase, setDragOverPhase] = useState(null);
   const [dragOverRow, setDragOverRow] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const currentUser = demoMode ? users[0] : clerkUser ? users.find(u => u.email === clerkUser.primaryEmailAddress?.emailAddress) || { id: 999, email: clerkUser.primaryEmailAddress?.emailAddress || 'unknown', username: clerkUser.firstName || 'User', avatar: clerkUser.imageUrl || 'https://ui-avatars.com/api/?name=User&background=059669&color=fff', role: 'worker', isAdmin: false, managerId: 1 } : null;
+  const currentUser = demoMode ? users.find(u => u.username.toLowerCase() === demoMode) || users[0] : clerkUser ? users.find(u => u.email === clerkUser.primaryEmailAddress?.emailAddress) || { id: 'guest-' + Date.now(), email: clerkUser.primaryEmailAddress?.emailAddress || 'unknown', username: clerkUser.firstName || 'User', avatar: clerkUser.imageUrl || 'https://ui-avatars.com/api/?name=User&background=059669&color=fff', role: 'worker', isAdmin: false, managerId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81' } : null;
 
   // Close sidebar on mobile by default
   useEffect(() => { if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false); }, []);
@@ -1202,16 +1490,23 @@ export default function Home() {
     syncClerkUser();
   }, [isSignedIn, clerkUser, demoMode]);
 
-  // Load data from Supabase on mount
+  // Load data from Supabase on mount - BLOCKS if connection fails
   useEffect(() => {
     const loadFromSupabase = async () => {
       try {
-        setSupabaseLoading(true);
-        setSupabaseError(null);
+        setSyncStatus('checking');
+        setSyncError(null);
+        
+        // First test connection
+        const connected = await testConnection();
+        if (!connected) {
+          throw new Error('Could not connect to database. Please check your internet connection.');
+        }
+        console.log('✅ Database connection verified');
 
         const data = await db.loadAllData();
-
-        // Only update state if we got data back
+        
+        // Load ALL data from Supabase - no localStorage fallback
         if (data.buildingTasks && data.buildingTasks.length > 0) {
           setBuildingTasks(data.buildingTasks);
         }
@@ -1227,20 +1522,26 @@ export default function Home() {
         if (data.workforce && data.workforce.length > 0) {
           setWorkforce(data.workforce);
         }
-        if (data.orderItems) {
-          setOrderItems(data.orderItems);
-        }
         if (data.options && Object.keys(data.options).length > 0) {
           setOptions(data.options);
         }
         if (data.buildingSequences && data.buildingSequences.standalone) {
           setBuildingSequences(data.buildingSequences);
+          console.log('✅ Loaded buildingSequences from Supabase');
+        }
+        if (data.pendingChanges && data.pendingChanges.length > 0) {
+          setPendingChanges(data.pendingChanges);
+          console.log(`✅ Loaded ${data.pendingChanges.length} pending changes from Supabase`);
+        }
+        if (data.bugReports && data.bugReports.length > 0) {
+          setBugReports(data.bugReports);
+          console.log(`✅ Loaded ${data.bugReports.length} bug reports from Supabase`);
         }
 
-        // Load profiles and merge with mockUsers (keep mockUsers as fallback for numeric IDs)
+        // Load profiles and merge with mockUsers
         if (data.profiles && data.profiles.length > 0) {
           const supabaseUsers = data.profiles.map(p => ({
-            id: p.id, // UUID from Supabase
+            id: p.id,
             email: p.email,
             username: p.username,
             avatar: p.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.username)}&background=059669&color=fff`,
@@ -1248,74 +1549,177 @@ export default function Home() {
             isAdmin: p.role === 'manager',
             managerId: p.managerId,
           }));
-          // Merge: mockUsers as base, append real users from Supabase
           const existingEmails = mockUsers.map(u => u.email);
           const newUsers = supabaseUsers.filter(u => !existingEmails.includes(u.email));
           setUsers([...mockUsers, ...newUsers]);
           console.log(`✅ Loaded ${supabaseUsers.length} profiles from Supabase`);
         }
 
-        console.log('✅ Loaded data from Supabase');
+        console.log('✅ Loaded all data from Supabase');
+        setSyncStatus('saved');
+        setLastSaved(new Date().toISOString());
         setDataLoaded(true);
+        setInitialLoadFailed(false);
       } catch (err) {
         console.error('❌ Error loading from Supabase:', err);
-        setSupabaseError(err.message);
-        // Fall back to localStorage data (already loaded)
-        console.log('📦 Using localStorage fallback');
-      } finally {
-        setSupabaseLoading(false);
+        setSyncError(err.message);
+        setSyncStatus('error');
+        setInitialLoadFailed(true);
+        // DO NOT fall back to localStorage - block the app
       }
     };
 
     loadFromSupabase();
   }, []);
 
-  // Save data to Supabase (debounced) and localStorage whenever key state changes
-  useEffect(() => {
-    // Always save to localStorage immediately
-    saveToStorage({
+  // Retry connection function
+  const retryConnection = async () => {
+    setIsRetrying(true);
+    try {
+      const connected = await testConnection();
+      if (!connected) {
+        throw new Error('Could not connect to database. Please check your internet connection.');
+      }
+      const data = await db.loadAllData();
+      
+      // Update all state
+      if (data.buildingTasks) setBuildingTasks(data.buildingTasks);
+      if (data.kanbanTasks) setKanbanTasks(data.kanbanTasks);
+      if (data.recurringTasks) setRecurringTasks(data.recurringTasks);
+      if (data.comments) setComments(data.comments);
+      if (data.workforce) setWorkforce(data.workforce);
+      if (data.options) setOptions(data.options);
+      if (data.buildingSequences?.standalone) setBuildingSequences(data.buildingSequences);
+      
+      setSyncStatus('saved');
+      setSyncError(null);
+      setLastSaved(new Date().toISOString());
+      setDataLoaded(true);
+      setInitialLoadFailed(false);
+    } catch (err) {
+      setSyncError(err.message);
+      setSyncStatus('error');
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  // Copy data backup to clipboard
+  const copyDataBackup = () => {
+    const backup = {
       buildingTasks,
       kanbanTasks,
       recurringTasks,
       comments,
-      notifications,
-      options,
       workforce,
-      orderItems,
-      buildingSequences
-    });
+      options,
+      buildingSequences,
+      pendingChanges,
+      bugReports,
+      backupTime: new Date().toISOString()
+    };
+    navigator.clipboard.writeText(JSON.stringify(backup, null, 2));
+    alert('✅ Data backup copied to clipboard! Paste it somewhere safe.');
+  };
 
-    // Debounce Supabase saves to avoid too many requests
+  // Save data to Supabase (debounced) - shows error overlay on failure
+  useEffect(() => {
+    // Don't save if we haven't loaded yet or if initial load failed
+    if (!dataLoaded || initialLoadFailed) return;
+
+    // Debounce Supabase saves
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
+    setSyncStatus('saving');
+
     saveTimeoutRef.current = setTimeout(async () => {
       try {
+        // Save EVERYTHING to Supabase - no localStorage
         await db.saveAllData({
           buildingTasks,
           kanbanTasks,
           recurringTasks,
           workforce,
           options,
-          orderItems,
-          buildingSequences
+          buildingSequences,
+          pendingChanges,
+          bugReports
         });
         console.log('💾 Saved to Supabase');
+        setSyncStatus('saved');
+        setSyncError(null);
+        setLastSaved(new Date().toISOString());
       } catch (err) {
         console.error('❌ Error saving to Supabase:', err);
+        setSyncStatus('error');
+        setSyncError(err.message);
+        // This will trigger the blocking overlay
       }
-    }, 2000); // Wait 2 seconds after last change before saving
+    }, 2000);
 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, orderItems, buildingSequences]);
+  }, [buildingTasks, kanbanTasks, recurringTasks, comments, notifications, options, workforce, buildingSequences, pendingChanges, bugReports, dataLoaded, initialLoadFailed]);
 
-  if (!isLoaded || supabaseLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}><div style={{ color: '#fff', fontSize: '18px' }}>{supabaseLoading ? '🔄 Syncing with database...' : 'Loading...'}</div>{supabaseError && <div style={{ color: '#fef3c7', fontSize: '14px' }}>⚠️ Using offline mode</div>}</div>;
-  if (!isSignedIn && !demoMode) return <LoginScreen onDemoLogin={() => setDemoMode(true)} />;
+  // Auto-create SC kanban tasks for building tasks with "Supply Chain Pending Order" status
+  // This handles new rows created via Add Step or Duplicate Step that bypass handleBuildingStatusChange
+  useEffect(() => {
+    // Must be loaded, have a user, and user must be admin
+    if (!dataLoaded || !currentUser || !currentUser.isAdmin) return;
+    
+    // Find building tasks that need SC kanban tasks
+    const tasksNeedingSC = buildingTasks.filter(bt => {
+      // Must have Supply Chain Pending Order status
+      if (bt.status !== 'Supply Chain Pending Order') return false;
+      // Must have step AND task filled in (not blank rows)
+      if (!bt.step || !bt.task) return false;
+      // Must not already have an SC kanban task
+      const hasExistingSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === bt.id);
+      return !hasExistingSCTask;
+    });
+
+    // Create SC tasks for each one
+    if (tasksNeedingSC.length > 0) {
+      console.log(`🔗 Auto-creating ${tasksNeedingSC.length} SC task(s) for new building rows`);
+      const newSCTasks = tasksNeedingSC.map(task => ({
+        id: 'sc' + Date.now() + Math.random().toString(36).substr(2, 5),
+        buildingTaskId: task.id,
+        title: `SC: ${task.step} - ${task.task} - ${task.villa}`,
+        assignedTo: PROCUREMENT_USER_ID,
+        column: 'thisWeek',
+        scStatus: 'research',
+        dueDate: calculateDeadlineOnSite(task.earliestStart),
+        deadlineOnSite: calculateDeadlineOnSite(task.earliestStart),
+        expectedArrival: '',
+        type: 'sc',
+        estTime: 2,
+        actualTime: null,
+        createdAt: TODAY
+      }));
+      setKanbanTasks(prev => [...prev, ...newSCTasks]);
+    }
+  }, [buildingTasks, kanbanTasks, dataLoaded, currentUser]);
+
+  // Show connection failed screen if initial load failed
+  if (initialLoadFailed) {
+    return <ConnectionFailedScreen error={syncError} onRetry={retryConnection} isRetrying={isRetrying} />;
+  }
+
+  // Show loading screen while checking connection
+  if (!isLoaded || syncStatus === 'checking') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' }}>
+        <div style={{ color: '#fff', fontSize: '18px' }}>🔄 Connecting to database...</div>
+      </div>
+    );
+  }
+
+  if (!isSignedIn && !demoMode) return <LoginScreen onDemoLogin={(user) => setDemoMode(user)} />;
 
   const isManager = currentUser.role === 'manager';
 
@@ -1323,7 +1727,7 @@ export default function Home() {
   const proposeChange = (type, data) => {
     const change = {
       id: 'pc' + Date.now(),
-      type, // 'edit', 'add_step', 'add_phase', 'delete', 'reorder', 'add_sequence'
+      type, // 'edit', 'add_step', 'add_phase', 'delete', 'reorder', 'add_sequence', 'field_edit'
       ...data,
       requestedBy: currentUser.id,
       timestamp: new Date().toISOString(),
@@ -1334,8 +1738,8 @@ export default function Home() {
     // Create task for admin to review
     setKanbanTasks(prev => [...prev, {
       id: 'review' + Date.now(),
-      title: `Review: ${type} by ${currentUser.username}`,
-      assignedTo: 1, // Patrick
+      title: `Review: ${type === 'field_edit' ? `${data.field} update` : type} by ${currentUser.username}`,
+      assignedTo: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', // Patrick
       column: 'today',
       dueDate: TODAY,
       type: 'manual',
@@ -1346,12 +1750,51 @@ export default function Home() {
     }]);
     setNotifications(prev => [...prev, {
       id: Date.now(),
-      userId: 1, // Patrick
+      userId: 'ab2ee187-4508-49c2-a5d0-3d23c0160c81', // Patrick
       fromUserId: currentUser.id,
-      text: `${currentUser.username} proposed a change to Building Sequence`,
+      text: type === 'field_edit' 
+        ? `${currentUser.username} proposed ${data.field} update for "${data.taskName || 'a task'}"`
+        : `${currentUser.username} proposed a change to Building Sequence`,
       timestamp: new Date().toISOString(),
       read: false
     }]);
+  };
+
+  // Propose a field edit (for workers on existing approved rows)
+  const proposeFieldEdit = (task, field, newValue) => {
+    // Check if there's already a pending edit for this task+field
+    const existingPending = pendingChanges.find(c => 
+      c.type === 'field_edit' && 
+      c.taskId === task.id && 
+      c.field === field && 
+      c.status === 'pending'
+    );
+    if (existingPending) {
+      // Update existing pending change
+      setPendingChanges(prev => prev.map(c => 
+        c.id === existingPending.id ? { ...c, newValue, timestamp: new Date().toISOString() } : c
+      ));
+    } else {
+      proposeChange('field_edit', {
+        taskId: task.id,
+        taskName: task.task || task.step,
+        villa: task.villa,
+        subCategory: task.subCategory,
+        field,
+        oldValue: task[field],
+        newValue
+      });
+    }
+  };
+
+  // Get pending field edit for a specific task+field
+  const getPendingFieldEdit = (taskId, field) => {
+    return pendingChanges.find(c => 
+      c.type === 'field_edit' && 
+      c.taskId === taskId && 
+      c.field === field && 
+      c.status === 'pending'
+    );
   };
 
   const approveChange = (changeId) => {
@@ -1361,6 +1804,17 @@ export default function Home() {
     // Apply the change
     if (change.type === 'edit') {
       setBuildingTasks(prev => prev.map(t => t.id === change.taskId ? { ...t, [change.field]: change.newValue } : t));
+    } else if (change.type === 'field_edit') {
+      setBuildingTasks(prev => prev.map(t => t.id === change.taskId ? { ...t, [change.field]: change.newValue } : t));
+      // Notify the requester
+      setNotifications(prev => [...prev, {
+        id: Date.now(),
+        userId: change.requestedBy,
+        fromUserId: currentUser.id,
+        text: `Your ${change.field} update was approved`,
+        timestamp: new Date().toISOString(),
+        read: false
+      }]);
     } else if (change.type === 'add_step') {
       setBuildingTasks(prev => [...prev, change.newTask]);
     } else if (change.type === 'add_phase') {
@@ -1378,8 +1832,22 @@ export default function Home() {
   };
 
   const rejectChange = (changeId) => {
+    const change = pendingChanges.find(c => c.id === changeId);
     setPendingChanges(prev => prev.map(c => c.id === changeId ? { ...c, status: 'rejected' } : c));
     setKanbanTasks(prev => prev.filter(t => t.linkedChangeId !== changeId));
+    // Notify requester of rejection
+    if (change) {
+      setNotifications(prev => [...prev, {
+        id: Date.now(),
+        userId: change.requestedBy,
+        fromUserId: currentUser.id,
+        text: change.type === 'field_edit' 
+          ? `Your ${change.field} update was rejected`
+          : `Your change request was rejected`,
+        timestamp: new Date().toISOString(),
+        read: false
+      }]);
+    }
   };
 
   const addChangeComment = (changeId, text) => {
@@ -1391,6 +1859,25 @@ export default function Home() {
 
   // Wrapper for building task edits - routes through approval if not admin
   const editBuildingTask = (taskId, field, newValue) => {
+    // First check if this is a pending task
+    const pendingTask = pendingChanges.find(c => 
+      c.newTask?.id === taskId && 
+      c.status === 'pending' && 
+      (c.type === 'add_step' || c.type === 'add_phase')
+    );
+    
+    if (pendingTask) {
+      // Update the pending change - only allow creator or admin
+      if (currentUser.isAdmin || pendingTask.requestedBy === currentUser.id) {
+        setPendingChanges(prev => prev.map(c => 
+          c.id === pendingTask.id 
+            ? { ...c, newTask: { ...c.newTask, [field]: newValue } }
+            : c
+        ));
+      }
+      return;
+    }
+
     const task = buildingTasks.find(t => t.id === taskId);
     if (!task) return;
 
@@ -1490,211 +1977,9 @@ export default function Home() {
   };
   const handleTaskUpdate = (updated) => { setKanbanTasks(prev => prev.map(t => t.id === updated.id ? updated : t)); if (updated.type === 'sc' && updated.buildingTaskId) { if (updated.scStatus === 'pendingArrival') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Supply Chain Pending Arrival', expectedArrival: updated.expectedArrival } : t)); if (updated.scStatus === 'readyToStart' || updated.column === 'done') setBuildingTasks(prev => prev.map(t => t.id === updated.buildingTaskId ? { ...t, status: 'Ready to start (Supply Chain confirmed on-site)' } : t)); } };
   const handleTaskDelete = (id) => setKanbanTasks(prev => prev.filter(t => t.id !== id));
-  const handleAddTask = () => { const newTask = { id: 'k' + Date.now(), title: 'New Task', assignedTo: currentUser.id, column: 'today', dueDate: TODAY, type: 'manual', createdAt: TODAY }; setKanbanTasks(prev => [...prev, newTask]); setTaskModal(newTask); };
+  const handleAddTask = (column = 'today') => { const newTask = { id: 'k' + Date.now(), title: 'New Task', assignedTo: currentUser.id, column: column, dueDate: TODAY, type: 'manual', createdAt: TODAY }; setKanbanTasks(prev => [...prev, newTask]); setTaskModal(newTask); };
   const handleRecurringSave = (task) => { if (task.id) { setRecurringTasks(prev => prev.map(t => t.id === task.id ? task : t)); } else { setRecurringTasks(prev => [...prev, { ...task, id: 'r' + Date.now(), createdAt: TODAY }]); } };
   const handleRecurringDelete = (id) => setRecurringTasks(prev => prev.filter(t => t.id !== id));
-
-  // ============ ORDER ITEMS FUNCTIONS ============
-  const ORDER_ITEM_STATUSES = ['research', 'review', 'pendingArrival', 'arrived', 'readyOnSite'];
-  const ORDER_ITEM_STATUS_LABELS = {
-    research: 'Research',
-    review: 'Review',
-    pendingArrival: 'Pending Arrival',
-    arrived: 'Arrived',
-    readyOnSite: 'Ready On-Site'
-  };
-
-  // Get order items for a specific SC task
-  const getOrderItemsForScTask = (scTaskId) => {
-    return (orderItems || []).filter(item => item.scTaskId === scTaskId);
-  };
-
-  // Get order items for a specific building task
-  const getOrderItemsForBuildingTask = (buildingTaskId) => {
-    return (orderItems || []).filter(item => item.buildingTaskId === buildingTaskId);
-  };
-
-  // Add new order item
-  const addOrderItem = (scTaskId, buildingTaskId, name) => {
-    const scTaskItems = getOrderItemsForScTask(scTaskId);
-    const newItem = {
-      id: 'oi' + Date.now(),
-      scTaskId,
-      buildingTaskId,
-      name,
-      status: 'research',
-      expectedArrival: null,
-      sortOrder: scTaskItems.length,
-      createdBy: currentUser.id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    setOrderItems(prev => [...prev, newItem]);
-    return newItem;
-  };
-
-  // Update order item
-  const updateOrderItem = (itemId, updates) => {
-    setOrderItems(prev => prev.map(item => 
-      item.id === itemId 
-        ? { ...item, ...updates, updatedAt: new Date().toISOString() }
-        : item
-    ));
-  };
-
-  // Delete order item
-  const deleteOrderItem = (itemId) => {
-    setOrderItems(prev => prev.filter(item => item.id !== itemId));
-  };
-
-  // Change order item status with auto-triggers
-  const changeOrderItemStatus = (itemId, newStatus, buildingTaskId, scTaskId) => {
-    const item = orderItems.find(i => i.id === itemId);
-    if (!item) return;
-
-    const oldStatus = item.status;
-    const oldStatusIndex = ORDER_ITEM_STATUSES.indexOf(oldStatus);
-    const newStatusIndex = ORDER_ITEM_STATUSES.indexOf(newStatus);
-
-    // Check if user can set "readyOnSite"
-    if (newStatus === 'readyOnSite' && !currentUser.canConfirmDelivery && !currentUser.isAdmin) {
-      alert('Only managers can mark items as Ready On-Site');
-      return;
-    }
-
-    // Update the order item
-    updateOrderItem(itemId, { status: newStatus });
-
-    // Get all items for this SC task after update
-    const allScItems = getOrderItemsForScTask(scTaskId).map(i => 
-      i.id === itemId ? { ...i, status: newStatus } : i
-    );
-
-    // Check if item went BACKWARD
-    if (newStatusIndex < oldStatusIndex && oldStatusIndex >= ORDER_ITEM_STATUSES.indexOf('pendingArrival')) {
-      // Item went backward - create NEW SC task for Jean
-      const buildingTask = buildingTasks.find(t => t.id === buildingTaskId);
-      if (buildingTask) {
-        const newScTask = {
-          id: 'sc' + Date.now(),
-          buildingTaskId: buildingTaskId,
-          title: `SC: ${buildingTask.step || 'Unnamed'} - ${buildingTask.subCategory} - ${buildingTask.villa}`,
-          assignedTo: 3, // Jean
-          column: 'today',
-          scStatus: 'research',
-          dueDate: TODAY,
-          deadlineOnSite: buildingTask.earliestStart || '',
-          expectedArrival: '',
-          type: 'sc',
-          estTime: null,
-          actualTime: null,
-          createdAt: TODAY
-        };
-        setKanbanTasks(prev => [...prev, newScTask]);
-        
-        // Add comment explaining the backward movement
-        const commentText = `⚠️ Order item "${item.name}" moved backward from ${ORDER_ITEM_STATUS_LABELS[oldStatus]} to ${ORDER_ITEM_STATUS_LABELS[newStatus]}. New SC task created.`;
-        setComments(prev => ({
-          ...prev,
-          [buildingTaskId]: [...(prev[buildingTaskId] || []), {
-            id: 'c' + Date.now(),
-            userId: 0, // System
-            text: commentText,
-            timestamp: new Date().toISOString()
-          }]
-        }));
-
-        // Revert building task status
-        setBuildingTasks(prev => prev.map(t => 
-          t.id === buildingTaskId 
-            ? { ...t, status: 'Supply Chain Pending Order' }
-            : t
-        ));
-      }
-    } else {
-      // Check if we need to update building task status based on item progression
-      updateBuildingTaskFromOrderItems(buildingTaskId, allScItems);
-    }
-  };
-
-  // Update building task status based on order items
-  const updateBuildingTaskFromOrderItems = (buildingTaskId, scItems) => {
-    if (!scItems || scItems.length === 0) return;
-
-    const allReadyOnSite = scItems.every(i => i.status === 'readyOnSite');
-    const anyArrived = scItems.some(i => i.status === 'arrived');
-    const anyPendingArrival = scItems.some(i => i.status === 'pendingArrival');
-
-    if (allReadyOnSite) {
-      // All items ready - update building task and move SC task to done
-      setBuildingTasks(prev => prev.map(t => 
-        t.id === buildingTaskId 
-          ? { ...t, status: 'Ready to start (Supply Chain confirmed on-site)' }
-          : t
-      ));
-      // Move SC task to done
-      const scTask = kanbanTasks.find(kt => kt.type === 'sc' && kt.buildingTaskId === buildingTaskId);
-      if (scTask) {
-        setKanbanTasks(prev => prev.map(t => 
-          t.id === scTask.id ? { ...t, column: 'done' } : t
-        ));
-      }
-    } else if (anyArrived) {
-      setBuildingTasks(prev => prev.map(t => 
-        t.id === buildingTaskId 
-          ? { ...t, status: 'Supply Chain Arrived to be Confirmed' }
-          : t
-      ));
-    } else if (anyPendingArrival) {
-      setBuildingTasks(prev => prev.map(t => 
-        t.id === buildingTaskId 
-          ? { ...t, status: 'Supply Chain Pending Arrival' }
-          : t
-      ));
-    }
-  };
-
-  // Update order item expected arrival with auto-sync to building task
-  const updateOrderItemExpectedArrival = (itemId, date, buildingTaskId) => {
-    updateOrderItem(itemId, { expectedArrival: date });
-    
-    // Sync to building task - use earliest expected arrival among all items
-    const allItems = getOrderItemsForBuildingTask(buildingTaskId);
-    const allDates = allItems
-      .map(i => i.id === itemId ? date : i.expectedArrival)
-      .filter(d => d);
-    
-    if (allDates.length > 0) {
-      const earliestDate = allDates.sort()[0];
-      setBuildingTasks(prev => prev.map(t => 
-        t.id === buildingTaskId 
-          ? { ...t, expectedArrival: earliestDate }
-          : t
-      ));
-      
-      // Add comment about the sync
-      const item = orderItems.find(i => i.id === itemId);
-      setComments(prev => ({
-        ...prev,
-        [buildingTaskId]: [...(prev[buildingTaskId] || []), {
-          id: 'c' + Date.now(),
-          userId: 0, // System
-          text: `📅 Expected arrival updated: "${item?.name || 'Item'}" expected ${date}. Building task updated.`,
-          timestamp: new Date().toISOString()
-        }]
-      }));
-    }
-  };
-
-  // Get order items progress for an SC task
-  const getOrderItemsProgress = (scTaskId) => {
-    const items = getOrderItemsForScTask(scTaskId);
-    const total = items.length;
-    const readyCount = items.filter(i => i.status === 'readyOnSite').length;
-    return { total, readyCount, percentage: total > 0 ? Math.round((readyCount / total) * 100) : 0 };
-  };
-  // ============ END ORDER ITEMS FUNCTIONS ============
-
   const handleDuplicateRecurring = (task) => {
     const newTask = { ...task, id: 'r' + Date.now(), title: task.title + ' (copy)', createdAt: TODAY };
     setRecurringTasks(prev => [...prev, newTask]);
@@ -1704,6 +1989,43 @@ export default function Home() {
   const handleRowDragStart = (e, task, subCat) => { setDraggedRow({ ...task, subCategory: subCat }); e.dataTransfer.effectAllowed = 'move'; };
   const handleRowDragOver = (e, task) => { e.preventDefault(); if (draggedRow && task.id !== draggedRow.id) setDragOverRow(task.id); };
   const handleRowDrop = (e, targetTask, catTasks) => { e.preventDefault(); if (!draggedRow || draggedRow.subCategory !== targetTask.subCategory) { setDraggedRow(null); setDragOverRow(null); return; } const fromIndex = catTasks.findIndex(t => t.id === draggedRow.id); const toIndex = catTasks.findIndex(t => t.id === targetTask.id); if (fromIndex !== -1 && toIndex !== -1) { const newOrder = [...catTasks]; const [moved] = newOrder.splice(fromIndex, 1); newOrder.splice(toIndex, 0, moved); setBuildingTasks(prev => { const updated = [...prev]; newOrder.forEach((t, i) => { const idx = updated.findIndex(x => x.id === t.id); if (idx !== -1) updated[idx] = { ...updated[idx], order: i + 1 }; }); return updated; }); } setDraggedRow(null); setDragOverRow(null); };
+  
+  // Phase drag handlers
+  const handlePhaseDragStart = (e, subCat, mainCat) => { 
+    setDraggedPhase({ subCat, mainCat }); 
+    e.dataTransfer.effectAllowed = 'move'; 
+  };
+  const handlePhaseDragOver = (e, subCat) => { 
+    e.preventDefault(); 
+    if (draggedPhase && subCat !== draggedPhase.subCat) setDragOverPhase(subCat); 
+  };
+  const handlePhaseDrop = (e, targetSubCat, phaseList) => { 
+    e.preventDefault(); 
+    if (!draggedPhase) { setDraggedPhase(null); setDragOverPhase(null); return; }
+    
+    const fromIndex = phaseList.findIndex(p => p === draggedPhase.subCat);
+    const toIndex = phaseList.findIndex(p => p === targetSubCat);
+    
+    if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+      // Reorder phases by updating mainCategory with order prefix
+      const newPhaseOrder = [...phaseList];
+      const [moved] = newPhaseOrder.splice(fromIndex, 1);
+      newPhaseOrder.splice(toIndex, 0, moved);
+      
+      // Update all tasks in the current villa with new phase orders
+      setBuildingTasks(prev => prev.map(t => {
+        if (t.villa !== currentVilla) return t;
+        const phaseIndex = newPhaseOrder.indexOf(t.subCategory);
+        if (phaseIndex === -1) return t;
+        // Update mainCategory to reflect new order (e.g., "01 Foundation", "02 Walls")
+        const orderPrefix = String(phaseIndex + 1).padStart(2, '0');
+        const baseName = t.mainCategory.replace(/^\d+\s*/, '');
+        return { ...t, mainCategory: `${orderPrefix} ${baseName}` };
+      }));
+    }
+    setDraggedPhase(null); 
+    setDragOverPhase(null); 
+  };
   const handleDeleteBuildingTask = (id) => {
     if (currentUser.isAdmin) {
       setBuildingTasks(prev => prev.filter(t => t.id !== id));
@@ -1717,7 +2039,7 @@ export default function Home() {
     const tasksInPhase = buildingTasks.filter(t => t.villa === currentVilla && t.subCategory === subCat);
     const maxOrder = Math.max(0, ...tasksInPhase.map(t => t.order));
     const mainCat = tasksInPhase[0]?.mainCategory || '2 Foundation';
-    const newTask = { id: Date.now(), order: maxOrder + 1, villa: currentVilla, mainCategory: mainCat, subCategory: subCat, task: '', step: '', notes: '', status: 'Ready to start (Supply Chain confirmed on-site)', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' };
+    const newTask = { id: Date.now(), order: maxOrder + 1, villa: currentVilla, mainCategory: mainCat, subCategory: subCat, task: '', step: '', notes: '', status: 'Supply Chain Pending Order', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' };
     if (currentUser.isAdmin) {
       setBuildingTasks(prev => [...prev, newTask]);
     } else {
@@ -1733,8 +2055,12 @@ export default function Home() {
       ...sourceTask,
       id: Date.now(),
       order: maxOrder + 1,
-      step: sourceTask.step + ' (copy)',
-      status: 'Ready to start (Supply Chain confirmed on-site)',
+      // Keep step and task exactly the same - no "(copy)" suffix
+      step: sourceTask.step,
+      task: sourceTask.task,
+      // Always reset to Supply Chain Pending Order
+      status: 'Supply Chain Pending Order',
+      // Clear dates so user must set them
       expectedArrival: '',
       earliestStart: ''
     };
@@ -1746,7 +2072,7 @@ export default function Home() {
   };
 
   const handleAddPhase = (data) => {
-    const newTask = { id: Date.now(), order: 1, villa: currentVilla, mainCategory: data.mainCat, subCategory: data.subCat, task: '', step: '', notes: '', status: 'Ready to start (Supply Chain confirmed on-site)', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' };
+    const newTask = { id: Date.now(), order: 1, villa: currentVilla, mainCategory: data.mainCat, subCategory: data.subCat, task: '', step: '', notes: '', status: 'Supply Chain Pending Order', expectedArrival: '', earliestStart: '', skilledWorkers: [], unskilledWorkers: [], duration: '' };
     if (currentUser.isAdmin) {
       setBuildingTasks(prev => [...prev, newTask]);
     } else {
@@ -1866,15 +2192,15 @@ export default function Home() {
 
   const pendingCount = pendingChanges.filter(p => p.status === 'pending').length;
 
-  // Sort and filter projects/zones
-  const sortedProjects = [...buildingSequences.standalone]
+  // Sort and filter projects/zones (with safety checks)
+  const sortedProjects = (buildingSequences?.standalone || [])
     .filter(s => showArchived || !s.archived)
     .sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
-  const sortedZones = [...buildingSequences.commons.zones]
+  const sortedZones = (buildingSequences?.commons?.zones || [])
     .filter(z => showArchived || !z.archived)
     .sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
-  const archivedProjectCount = buildingSequences.standalone.filter(s => s.archived).length;
-  const archivedZoneCount = buildingSequences.commons.zones.filter(z => z.archived).length;
+  const archivedProjectCount = (buildingSequences?.standalone || []).filter(s => s.archived).length;
+  const archivedZoneCount = (buildingSequences?.commons?.zones || []).filter(z => z.archived).length;
   const totalArchived = archivedProjectCount + archivedZoneCount;
 
   // Build nav items from new structure
@@ -1899,7 +2225,7 @@ export default function Home() {
         // Add Project button (admin only)
         ...(currentUser.isAdmin ? [{ id: 'add-project', label: '+ Add Project', isAddProject: true }] : []),
         // Section header for Commons
-        { id: 'commons-header', label: buildingSequences.commons.label, isHeader: true },
+        { id: 'commons-header', label: buildingSequences?.commons?.label || 'Commons / Infrastructure', isHeader: true },
         // Zones under Commons (sorted: starred first, filtered: hide archived)
         ...sortedZones.map(z => ({
           id: `zone-${z.id}`,
@@ -1922,7 +2248,8 @@ export default function Home() {
     { id: 'schedule', label: 'Daily Worker Schedule', icon: 'calendar' },
     { id: 'workers', label: 'Workforce', icon: 'users' },
     { id: 'materials', label: 'Materials', icon: 'package' },
-    { id: 'reports', label: 'Reports', icon: 'chart' }
+    { id: 'reports', label: 'Reports', icon: 'chart' },
+    { id: 'bugReports', label: 'Bug/Change Requests', icon: 'bug', badge: bugReports.filter(b => !b.resolved).length || null }
   ];
 
   // Get current project/zone name for filtering
@@ -1930,13 +2257,13 @@ export default function Home() {
     // Standalone projects
     if (activeNav.startsWith('project-')) {
       const projectId = activeNav.replace('project-', '');
-      const project = buildingSequences.standalone.find(s => s.id === projectId);
+      const project = (buildingSequences?.standalone || []).find(s => s.id === projectId);
       return project?.label || null;
     }
     // Zone projects under Commons
     if (activeNav.startsWith('zone-')) {
       const zoneId = activeNav.replace('zone-', '');
-      const zone = buildingSequences.commons.zones.find(z => z.id === zoneId);
+      const zone = (buildingSequences?.commons?.zones || []).find(z => z.id === zoneId);
       return zone?.label || null;
     }
     return null;
@@ -1945,8 +2272,23 @@ export default function Home() {
   const currentProject = getCurrentProject();
   const currentVilla = currentProject; // Keep for backward compatibility with buildingTasks.villa field
   const filteredBuildingTasks = currentProject ? buildingTasks.filter(t => t.villa === currentProject).filter(t => !search || t.step.toLowerCase().includes(search.toLowerCase()) || t.task.toLowerCase().includes(search.toLowerCase())) : [];
-  const grouped = filteredBuildingTasks.reduce((acc, t) => { (acc[t.subCategory] = acc[t.subCategory] || []).push(t); return acc; }, {});
-  Object.keys(grouped).forEach(k => grouped[k].sort((a, b) => a.order - b.order));
+  
+  // Get pending tasks for this project (add_step and add_phase)
+  const pendingTasksForProject = pendingChanges
+    .filter(c => c.status === 'pending' && c.villa === currentProject && (c.type === 'add_step' || c.type === 'add_phase'))
+    .map(c => ({
+      ...c.newTask,
+      isPending: true,
+      changeId: c.id,
+      requestedBy: c.requestedBy,
+      pendingType: c.type
+    }));
+  
+  // Combine approved and pending tasks
+  const allTasksForProject = [...filteredBuildingTasks, ...pendingTasksForProject];
+  
+  const grouped = allTasksForProject.reduce((acc, t) => { (acc[t.subCategory] = acc[t.subCategory] || []).push(t); return acc; }, {});
+  Object.keys(grouped).forEach(k => grouped[k].sort((a, b) => (a.order || 999) - (b.order || 999)));
 
   const unreadCount = notifications.filter(n => n.userId === currentUser.id && !n.read).length;
   const activeTask = activeComments ? buildingTasks.find(t => t.id === activeComments) : null;
@@ -1956,10 +2298,21 @@ export default function Home() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', background: '#f3f4f6' }}>
+      {/* Blocking Overlay - shown when save fails */}
+      {syncStatus === 'error' && dataLoaded && (
+        <ConnectionBlockingOverlay 
+          error={syncError} 
+          onRetry={retryConnection} 
+          onCopyBackup={copyDataBackup}
+          isRetrying={isRetrying}
+        />
+      )}
+      
       {/* Mobile Header */}
       <div style={{ display: sidebarOpen ? 'none' : 'flex', position: 'fixed', top: 0, left: 0, right: 0, height: '60px', background: '#fff', borderBottom: '1px solid #e5e7eb', alignItems: 'center', padding: '0 16px', zIndex: 900, gap: '12px' }}>
         <button type="button" onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }}><Icon name="menu" size={24} /></button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #065f46, #10b981)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Icon name="leaf" size={16} /></div><span style={{ fontWeight: '600', fontSize: '15px' }}>Santi</span></div>
+        <div style={{ marginLeft: 'auto' }}><SyncStatusIndicator status={syncStatus} lastSaved={lastSaved} onRetry={retryConnection} /></div>
       </div>
 
       {/* Sidebar Overlay */}
@@ -1971,7 +2324,11 @@ export default function Home() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #065f46, #10b981)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Icon name="leaf" size={20} /></div><div><div style={{ fontSize: '15px', fontWeight: '700', color: '#1f2937' }}>Santi</div><div style={{ fontSize: '11px', color: '#6b7280' }}>Sustainable Dev</div></div></div>
           <button type="button" onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}><Icon name="x" size={20} /></button>
         </div>
-        <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#f9fafb', borderRadius: '10px' }}><img src={currentUser.avatar} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: '13px', fontWeight: '600' }}>{currentUser.username}</div><div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'capitalize' }}>{currentUser.role}</div></div><button type="button" onClick={() => setShowNotifications(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', position: 'relative', padding: '4px' }}><Icon name="bell" size={18} />{unreadCount > 0 && <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '16px', height: '16px', background: '#dc2626', color: '#fff', borderRadius: '50%', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>{unreadCount}</span>}</button>{demoMode ? <button type="button" onClick={() => setDemoMode(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button> : <SignOutButton><button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button></SignOutButton>}</div></div>
+        {/* Sync Status Banner in Sidebar */}
+        <div style={{ padding: '8px 16px', borderBottom: '1px solid #e5e7eb' }}>
+          <SyncStatusIndicator status={syncStatus} lastSaved={lastSaved} onRetry={retryConnection} />
+        </div>
+        <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}><div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#f9fafb', borderRadius: '10px' }}><img src={currentUser.avatar} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%' }} /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: '13px', fontWeight: '600' }}>{currentUser.username}</div><div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'capitalize' }}>{currentUser.role}</div></div><button type="button" onClick={() => setShowNotifications(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', position: 'relative', padding: '4px' }}><Icon name="bell" size={18} />{unreadCount > 0 && <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '16px', height: '16px', background: '#dc2626', color: '#fff', borderRadius: '50%', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600' }}>{unreadCount}</span>}</button>{demoMode ? <button type="button" onClick={() => setDemoMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button> : <SignOutButton><button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><Icon name="logout" size={18} /></button></SignOutButton>}</div></div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>{navItems.map(item => (<div key={item.id}>
           <button type="button" onClick={() => {
             if (item.subItems) {
@@ -2063,7 +2420,7 @@ export default function Home() {
       {/* Main Content */}
       <main style={{ flex: 1, overflowY: 'auto', padding: '24px', marginLeft: sidebarOpen ? '260px' : '0', paddingTop: sidebarOpen ? '24px' : '84px', transition: 'margin-left 0.3s ease' }}>
         {/* Task Board */}
-        {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{selectedTaskUser === 'all' ? 'All Tasks' : users.find(u => u.id === (selectedTaskUser || currentUser.id))?.username + "'s Tasks"}</p></div><select value={selectedTaskUser || currentUser.id} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : Number(e.target.value))} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}>{isManager && <option value="all">All Tasks</option>}{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={handleAddTask} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} currentUserId={currentUser.id} onQuickMove={handleQuickMove} columns={columns} />)}</div></>)}
+        {activeNav === 'taskBoard' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Task Board</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{selectedTaskUser === 'all' ? 'All Tasks' : users.find(u => u.id === (selectedTaskUser || currentUser.id))?.username + "'s Tasks"}</p></div><select value={selectedTaskUser || currentUser.id} onChange={e => setSelectedTaskUser(e.target.value === 'all' ? 'all' : e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}>{isManager && <option value="all">All Tasks</option>}{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select></div><button type="button" onClick={() => handleAddTask('today')} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add Task</button></div><div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>{columns.map(col => <KanbanColumn key={col.id} id={col.id} title={col.title} tasks={visibleTasks.filter(t => t.column === col.id)} onDrop={handleDrop} onDragOver={setDragOverColumn} users={users} onTaskClick={setTaskModal} onDragStart={(e, task) => setDraggedTask(task)} dragOverColumn={dragOverColumn} dragOverTaskId={dragOverTaskId} setDragOverTaskId={setDragOverTaskId} currentUserId={currentUser.id} onQuickMove={handleQuickMove} columns={columns} onAddTask={handleAddTask} />)}</div></>)}
 
         {/* Recurring Tasks */}
         {activeNav === 'recurring' && (<><div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}><div><h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Recurring Tasks</h1><p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>{filteredRecurring.filter(rt => rt.status !== 'archived').length} active, {recurringTasks.filter(rt => rt.status === 'archived').length} archived</p></div><select value={recurringFilter} onChange={e => setRecurringFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff' }}><option value="all">All People</option>{users.map(u => <option key={u.id} value={u.id}>{u.username}{u.id === currentUser.id ? ' (me)' : ''}</option>)}</select><label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#6b7280', cursor: 'pointer' }}><input type="checkbox" checked={showArchivedRecurring} onChange={e => setShowArchivedRecurring(e.target.checked)} style={{ cursor: 'pointer' }} />Show archived</label></div><button type="button" onClick={() => setRecurringModal({})} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={18} /> Add</button></div>
@@ -2109,7 +2466,10 @@ export default function Home() {
               <button type="button" onClick={() => setAddPhaseModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}><Icon name="plus" size={16} /> Add First Phase</button>
             </div>
           )}
-          {Object.entries(grouped).map(([subCat, catTasks]) => { const mainCat = catTasks[0]?.mainCategory || ''; return (<div key={subCat} style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}><div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>{subCat}</h3><span style={{ fontSize: '12px', color: '#6b7280' }}>{catTasks.length} steps</span></div>{currentUser.isAdmin && <button type="button" onClick={() => setEditPhaseModal({ subCat, mainCat, villa: currentVilla })} style={{ padding: '4px 8px', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer', color: '#6b7280', fontSize: '12px' }} title="Edit phase">✏️</button>}</div><button type="button" onClick={() => handleAddStep(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: '#fafafa' }}>{['', 'Readiness', 'Status', 'Steps', 'Task', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; return (<tr key={t.id} draggable onDragStart={(e) => handleRowDragStart(e, t, subCat)} onDragOver={(e) => handleRowDragOver(e, t)} onDrop={(e) => handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '30px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div></td><td style={{ padding: '8px' }}>{r.type !== 'sequenced' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status} onChange={v => handleBuildingStatusChange(t.id, v, t.status)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div></td><td style={{ padding: '8px' }}><EditableCell value={t.step} onChange={v => editBuildingTask(t.id, 'step', v)} placeholder="Step name" /></td><td style={{ padding: '8px' }}><Dropdown value={t.task} options={options.task[subCat] || []} onChange={v => editBuildingTask(t.id, 'task', v)} placeholder="Select task..." allowNew onAddNew={(newTask) => { setOptions(prev => ({ ...prev, task: { ...prev.task, [subCat]: [...(prev.task[subCat] || []), newTask] } })); editBuildingTask(t.id, 'task', newTask); }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.notes} onChange={v => editBuildingTask(t.id, 'notes', v)} placeholder="Notes" /></td><td style={{ padding: '8px' }}><input type="date" value={t.earliestStart || ''} onChange={e => editBuildingTask(t.id, 'earliestStart', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><input type="date" value={t.expectedArrival || ''} onChange={e => editBuildingTask(t.id, 'expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }} /></td><td style={{ padding: '8px' }}><EditableCell value={t.duration} onChange={v => editBuildingTask(t.id, 'duration', v)} placeholder="0:00" /></td><td style={{ padding: '8px' }}><MultiSelect values={t.skilledWorkers} options={options.skilledWorker} onChange={v => editBuildingTask(t.id, 'skilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><MultiSelect values={t.unskilledWorkers} options={options.unskilledWorker} onChange={v => editBuildingTask(t.id, 'unskilledWorkers', v)} placeholder="Select..." /></td><td style={{ padding: '8px' }}><button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button></td><td style={{ padding: '8px', display: 'flex', gap: '4px' }}><button type="button" onClick={() => handleDuplicateStep(t)} title="Duplicate row" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '6px' }}><Icon name="copy" size={16} /></button><button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button></td></tr>); })}</tbody></table></div></div>); })}
+          {(() => {
+            const phaseList = Object.keys(grouped);
+            return Object.entries(grouped).map(([subCat, catTasks]) => { const mainCat = catTasks[0]?.mainCategory || ''; const approvedCount = catTasks.filter(t => !t.isPending).length; const pendingCount = catTasks.filter(t => t.isPending).length; const isPendingPhase = approvedCount === 0 && pendingCount > 0; const isPhaseBeingDragged = draggedPhase?.subCat === subCat; const isPhaseDropTarget = dragOverPhase === subCat; return (<div key={subCat} draggable={currentUser.isAdmin && !isPendingPhase} onDragStart={(e) => currentUser.isAdmin && handlePhaseDragStart(e, subCat, mainCat)} onDragOver={(e) => handlePhaseDragOver(e, subCat)} onDrop={(e) => handlePhaseDrop(e, subCat, phaseList)} onDragEnd={() => { setDraggedPhase(null); setDragOverPhase(null); }} style={{ marginBottom: '32px', background: isPendingPhase ? 'rgba(251,191,36,0.15)' : '#fff', borderRadius: '12px', border: isPhaseDropTarget ? '2px dashed #059669' : isPendingPhase ? '2px solid #fbbf24' : '1px solid #e5e7eb', overflow: 'hidden', opacity: isPhaseBeingDragged ? 0.5 : 1, transition: 'border 0.15s ease' }}><div style={{ padding: '16px 20px', background: isPhaseDropTarget ? 'rgba(5,150,105,0.1)' : isPendingPhase ? 'rgba(251,191,36,0.3)' : '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: currentUser.isAdmin && !isPendingPhase ? 'grab' : 'default' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>{currentUser.isAdmin && !isPendingPhase && <div style={{ color: '#9ca3af', display: 'flex', alignItems: 'center' }}><Icon name="grip" size={18} /></div>}{isPendingPhase && <span style={{ fontSize: '10px', background: '#fbbf24', color: '#78350f', padding: '3px 8px', borderRadius: '4px', fontWeight: '600' }}>PENDING PHASE</span>}<div><h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0, color: isPendingPhase ? '#92400e' : 'inherit' }}>{subCat}</h3><span style={{ fontSize: '12px', color: isPendingPhase ? '#b45309' : '#6b7280' }}>{approvedCount} steps{pendingCount > 0 && <span style={{ marginLeft: '8px', color: '#f59e0b' }}>+{pendingCount} pending</span>}</span></div>{currentUser.isAdmin && !isPendingPhase && <button type="button" onClick={() => setEditPhaseModal({ subCat, mainCat, villa: currentVilla })} style={{ padding: '4px 8px', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer', color: '#6b7280', fontSize: '12px' }} title="Edit phase">✏️</button>}</div><button type="button" onClick={() => handleAddStep(subCat)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: isPendingPhase ? 'rgba(251,191,36,0.5)' : '#ecfdf5', color: isPendingPhase ? '#78350f' : '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}><Icon name="plus" size={14} /> Add Step</button></div><div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1400px' }}><thead><tr style={{ background: isPendingPhase ? 'rgba(251,191,36,0.2)' : '#fafafa' }}>{['', 'Readiness', 'Status', 'Steps', 'Task', 'Notes', 'Earliest Start', 'Expected Arrival', 'Est. Duration', 'Skilled', 'Unskilled', 'Comments', ''].map((h, i) => <th key={i} style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '600', color: '#6b7280', textAlign: 'left', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>{h === 'Est. Duration' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{h}<span title="Hours per person" style={{ cursor: 'help', color: '#9ca3af' }}><Icon name="info" size={12} /></span></span> : h}</th>)}</tr></thead><tbody>{catTasks.map((t, i) => { const r = getReadiness(t, catTasks, i); const hasSCTask = kanbanTasks.some(kt => kt.type === 'sc' && kt.buildingTaskId === t.id); const commentCount = (comments[t.id] || []).length; const isDragOver = dragOverRow === t.id; const isPending = t.isPending; const isOwnPending = isPending && t.requestedBy === currentUser.id; const canEditPending = isOwnPending || currentUser.isAdmin; const requester = isPending ? users.find(u => u.id === t.requestedBy) : null; const getPending = (field) => !isPending && getPendingFieldEdit(t.id, field); const pendingStatus = getPending('status'); const pendingStep = getPending('step'); const pendingTask = getPending('task'); const pendingNotes = getPending('notes'); const pendingEarliestStart = getPending('earliestStart'); const pendingExpectedArrival = getPending('expectedArrival'); const pendingDuration = getPending('duration'); const pendingSkilled = getPending('skilledWorkers'); const pendingUnskilled = getPending('unskilledWorkers'); const hasPendingEdits = pendingStatus || pendingStep || pendingTask || pendingNotes || pendingEarliestStart || pendingExpectedArrival || pendingDuration || pendingSkilled || pendingUnskilled; const handleFieldChange = (field, value) => { if (isPending && canEditPending) { editBuildingTask(t.id, field, value); } else if (!isPending && currentUser.isAdmin) { if (field === 'status') { handleBuildingStatusChange(t.id, value, t.status); } else { editBuildingTask(t.id, field, value); } } else if (!isPending) { proposeFieldEdit(t, field, value); } }; return (<tr key={t.id || t.changeId} draggable={!isPending} onDragStart={(e) => { e.stopPropagation(); !isPending && handleRowDragStart(e, t, subCat); }} onDragOver={(e) => !isPending && handleRowDragOver(e, t)} onDrop={(e) => !isPending && handleRowDrop(e, t, catTasks)} onDragEnd={() => { setDraggedRow(null); setDragOverRow(null); }} style={{ borderBottom: '1px solid #f3f4f6', background: isPending ? 'rgba(251,191,36,0.1)' : hasPendingEdits ? 'rgba(147,51,234,0.05)' : isDragOver ? 'rgba(5,150,105,0.1)' : r.type === 'ready' ? 'rgba(22,163,74,0.04)' : 'transparent', cursor: isPending ? 'default' : 'grab', opacity: draggedRow?.id === t.id ? 0.5 : 1 }}><td style={{ padding: '8px 4px', width: '50px' }}>{isPending ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span style={{ fontSize: '10px', background: '#fbbf24', color: '#78350f', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>PENDING</span>{requester && <span style={{ fontSize: '9px', color: '#92400e' }}>{requester.username}</span>}</div> : <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><div style={{ color: '#d1d5db', cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="grip" size={16} /></div><button type="button" onClick={() => handleDuplicateStep(t)} title="Duplicate row" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px' }}><Icon name="copy" size={14} /></button></div>}</td><td style={{ padding: '8px' }}>{isPending && currentUser.isAdmin ? <div style={{ display: 'flex', gap: '4px' }}><button type="button" onClick={() => approveChange(t.changeId)} style={{ padding: '4px 8px', background: '#059669', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✓</button><button type="button" onClick={() => rejectChange(t.changeId)} style={{ padding: '4px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✗</button><button type="button" onClick={() => setPendingReviewModal(pendingChanges.find(c => c.id === t.changeId))} style={{ padding: '4px 8px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>💬</button></div> : isPending && isOwnPending ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: 'rgba(251,191,36,0.2)', color: '#92400e', borderRadius: '4px', whiteSpace: 'nowrap' }}>⏳ Awaiting</span> : r.type !== 'sequenced' && !isPending && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: '600', background: r.bg, color: r.color, borderRadius: '4px', whiteSpace: 'nowrap' }}>{r.icon} {r.label}</span>}</td><td style={{ padding: '8px' }}>{pendingStatus ? <PendingField pending={pendingStatus} displayValue={pendingStatus.newValue} oldValue={pendingStatus.oldValue} onApprove={() => approveChange(pendingStatus.id)} onReject={() => rejectChange(pendingStatus.id)} isAdmin={currentUser.isAdmin} isOwn={pendingStatus.requestedBy === currentUser.id} editComponent={<StatusDropdown value={pendingStatus.newValue} options={options.status || []} onChange={v => handleFieldChange('status', v)} />} /> : (isPending ? (canEditPending ? <StatusDropdown value={t.status} options={options.status || []} onChange={v => editBuildingTask(t.id, 'status', v)} /> : <span style={{ fontSize: '12px', color: '#92400e', fontStyle: 'italic' }}>Awaiting approval</span>) : <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><StatusDropdown value={t.status} options={options.status || []} onChange={v => handleFieldChange('status', v)} />{hasSCTask && <span title="Has SC Task" style={{ color: '#2563eb' }}><Icon name="link" size={14} /></span>}</div>)}</td><td style={{ padding: '8px' }}>{pendingStep ? <PendingField pending={pendingStep} displayValue={pendingStep.newValue} oldValue={pendingStep.oldValue} onApprove={() => approveChange(pendingStep.id)} onReject={() => rejectChange(pendingStep.id)} isAdmin={currentUser.isAdmin} isOwn={pendingStep.requestedBy === currentUser.id} editComponent={<Dropdown value={pendingStep.newValue} options={(options.step || {})[subCat] || []} onChange={v => handleFieldChange('step', v)} placeholder="Select step..." allowNew onAddNew={(newStep) => { setOptions(prev => ({ ...prev, step: { ...(prev.step || {}), [subCat]: [...((prev.step || {})[subCat] || []), newStep] } })); handleFieldChange('step', newStep); }} />} /> : <Dropdown value={t.step} options={(options.step || {})[subCat] || []} onChange={v => handleFieldChange('step', v)} placeholder="Select step..." allowNew onAddNew={(newStep) => { setOptions(prev => ({ ...prev, step: { ...(prev.step || {}), [subCat]: [...((prev.step || {})[subCat] || []), newStep] } })); handleFieldChange('step', newStep); }} />}</td><td style={{ padding: '8px' }}>{pendingTask ? <PendingField pending={pendingTask} displayValue={pendingTask.newValue} oldValue={pendingTask.oldValue} onApprove={() => approveChange(pendingTask.id)} onReject={() => rejectChange(pendingTask.id)} isAdmin={currentUser.isAdmin} isOwn={pendingTask.requestedBy === currentUser.id} editComponent={<Dropdown value={pendingTask.newValue} options={(options.task || {})[subCat] || []} onChange={v => handleFieldChange('task', v)} placeholder="Select task..." allowNew onAddNew={(newTask) => { setOptions(prev => ({ ...prev, task: { ...(prev.task || {}), [subCat]: [...((prev.task || {})[subCat] || []), newTask] } })); handleFieldChange('task', newTask); }} />} /> : <Dropdown value={t.task} options={(options.task || {})[subCat] || []} onChange={v => handleFieldChange('task', v)} placeholder="Select task..." allowNew onAddNew={(newTask) => { setOptions(prev => ({ ...prev, task: { ...(prev.task || {}), [subCat]: [...((prev.task || {})[subCat] || []), newTask] } })); handleFieldChange('task', newTask); }} />}</td><td style={{ padding: '8px' }}>{pendingNotes ? <PendingField pending={pendingNotes} displayValue={pendingNotes.newValue || '(empty)'} oldValue={pendingNotes.oldValue} onApprove={() => approveChange(pendingNotes.id)} onReject={() => rejectChange(pendingNotes.id)} isAdmin={currentUser.isAdmin} isOwn={pendingNotes.requestedBy === currentUser.id} editComponent={<EditableCell value={pendingNotes.newValue} onChange={v => handleFieldChange('notes', v)} placeholder="Notes" />} /> : <EditableCell value={t.notes} onChange={v => handleFieldChange('notes', v)} placeholder="Notes" />}</td><td style={{ padding: '8px' }}>{pendingEarliestStart ? <PendingField pending={pendingEarliestStart} displayValue={pendingEarliestStart.newValue} oldValue={pendingEarliestStart.oldValue} onApprove={() => approveChange(pendingEarliestStart.id)} onReject={() => rejectChange(pendingEarliestStart.id)} isAdmin={currentUser.isAdmin} isOwn={pendingEarliestStart.requestedBy === currentUser.id} editComponent={<input type="date" value={pendingEarliestStart.newValue || ''} onChange={e => handleFieldChange('earliestStart', e.target.value)} style={{ padding: '6px', border: 'none', borderRadius: '4px', fontSize: '13px', background: 'transparent', width: '100%' }} />} /> : <input type="date" value={t.earliestStart || ''} onChange={e => handleFieldChange('earliestStart', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px', background: isPending ? 'rgba(251,191,36,0.1)' : '#fff' }} />}</td><td style={{ padding: '8px' }}>{pendingExpectedArrival ? <PendingField pending={pendingExpectedArrival} displayValue={pendingExpectedArrival.newValue} oldValue={pendingExpectedArrival.oldValue} onApprove={() => approveChange(pendingExpectedArrival.id)} onReject={() => rejectChange(pendingExpectedArrival.id)} isAdmin={currentUser.isAdmin} isOwn={pendingExpectedArrival.requestedBy === currentUser.id} editComponent={<input type="date" value={pendingExpectedArrival.newValue || ''} onChange={e => handleFieldChange('expectedArrival', e.target.value)} style={{ padding: '6px', border: 'none', borderRadius: '4px', fontSize: '13px', background: 'transparent', width: '100%' }} />} /> : <input type="date" value={t.expectedArrival || ''} onChange={e => handleFieldChange('expectedArrival', e.target.value)} style={{ padding: '6px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px', background: isPending ? 'rgba(251,191,36,0.1)' : '#fff' }} />}</td><td style={{ padding: '8px' }}>{pendingDuration ? <PendingField pending={pendingDuration} displayValue={pendingDuration.newValue || '0'} oldValue={pendingDuration.oldValue} onApprove={() => approveChange(pendingDuration.id)} onReject={() => rejectChange(pendingDuration.id)} isAdmin={currentUser.isAdmin} isOwn={pendingDuration.requestedBy === currentUser.id} editComponent={<EditableCell value={pendingDuration.newValue} onChange={v => handleFieldChange('duration', v)} placeholder="0" />} /> : <EditableCell value={t.duration} onChange={v => handleFieldChange('duration', v)} placeholder="0" />}</td><td style={{ padding: '8px' }}>{pendingSkilled ? <PendingField pending={pendingSkilled} displayValue={(pendingSkilled.newValue || []).join(', ') || 'None'} oldValue={pendingSkilled.oldValue} onApprove={() => approveChange(pendingSkilled.id)} onReject={() => rejectChange(pendingSkilled.id)} isAdmin={currentUser.isAdmin} isOwn={pendingSkilled.requestedBy === currentUser.id} editComponent={<MultiSelect values={pendingSkilled.newValue || []} options={options.skilledWorker || []} onChange={v => handleFieldChange('skilledWorkers', v)} placeholder="Select..." />} /> : <MultiSelect values={t.skilledWorkers || []} options={options.skilledWorker || []} onChange={v => handleFieldChange('skilledWorkers', v)} placeholder="Select..." />}</td><td style={{ padding: '8px' }}>{pendingUnskilled ? <PendingField pending={pendingUnskilled} displayValue={(pendingUnskilled.newValue || []).join(', ') || 'None'} oldValue={pendingUnskilled.oldValue} onApprove={() => approveChange(pendingUnskilled.id)} onReject={() => rejectChange(pendingUnskilled.id)} isAdmin={currentUser.isAdmin} isOwn={pendingUnskilled.requestedBy === currentUser.id} editComponent={<MultiSelect values={pendingUnskilled.newValue || []} options={options.unskilledWorker || []} onChange={v => handleFieldChange('unskilledWorkers', v)} placeholder="Select..." />} /> : <MultiSelect values={t.unskilledWorkers || []} options={options.unskilledWorker || []} onChange={v => handleFieldChange('unskilledWorkers', v)} placeholder="Select..." />}</td><td style={{ padding: '8px' }}>{!isPending && <button type="button" onClick={() => setActiveComments(t.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '12px', background: commentCount > 0 ? '#ecfdf5' : '#f3f4f6', border: 'none', borderRadius: '6px', color: commentCount > 0 ? '#059669' : '#6b7280', cursor: 'pointer' }}><Icon name="message" size={14} />{commentCount > 0 && commentCount}</button>}</td><td style={{ padding: '8px' }}>{!isPending && <button type="button" onClick={() => handleDeleteBuildingTask(t.id)} style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button>}{isPending && (currentUser.isAdmin || t.requestedBy === currentUser.id) && <button type="button" onClick={() => rejectChange(t.changeId)} title="Cancel" style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '6px' }}><Icon name="trash" size={16} /></button>}</td></tr>); })}</tbody></table></div></div>); });
+          })()}
         </>)}
 
         {/* Daily Worker Schedule */}
@@ -2545,58 +2905,122 @@ export default function Home() {
             </div>
           ) : (
             <>
-              {/* Quick Actions Header */}
-              <div style={{ background: '#fef3c7', borderRadius: '12px', padding: '16px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '24px' }}>⚡</span>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>{pendingChanges.filter(c => c.status === 'pending').length} changes need your review</div>
-                    <div style={{ fontSize: '12px', color: '#b45309' }}>Quick review keeps the team moving</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" onClick={() => { pendingChanges.filter(c => c.status === 'pending').forEach(c => approveChange(c.id)); }} style={{ padding: '8px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Approve All</button>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {pendingChanges.filter(c => c.status === 'pending').map(change => {
-                  const requestedByUser = users.find(u => u.id === change.requestedBy);
-                  const task = change.taskId ? buildingTasks.find(t => t.id === change.taskId) : null;
-                  return (
-                    <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid #fef3c7', padding: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <img src={requestedByUser?.avatar} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
-                          <div>
-                            <div style={{ fontSize: '14px', fontWeight: '600' }}>{requestedByUser?.username}</div>
-                            <div style={{ fontSize: '12px', color: '#6b7280' }}>{formatTime(change.timestamp)}</div>
-                          </div>
-                        </div>
-                        <span style={{ fontSize: '11px', padding: '4px 10px', background: '#fef3c7', color: '#d97706', borderRadius: '20px', fontWeight: '600', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
-                      </div>
-
-                      <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>
-                        {change.type === 'edit' && <>Change <span style={{ color: '#059669' }}>{change.field}</span>: <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{change.oldValue || '(empty)'}</span> → <span style={{ color: '#059669' }}>{change.newValue}</span></>}
-                        {change.type === 'add_step' && <>Add new step: <span style={{ color: '#059669' }}>"{change.newTask?.step}"</span> to {change.subCategory}</>}
-                        {change.type === 'add_phase' && <>Add new phase: <span style={{ color: '#059669' }}>{change.subCategory}</span></>}
-                        {change.type === 'delete' && <>Delete step: <span style={{ color: '#dc2626' }}>"{change.step}"</span></>}
-                        {change.type === 'add_sequence' && <>Add new building sequence: <span style={{ color: '#059669' }}>"{change.sequenceLabel}"</span></>}
-                      </div>
-
-                      {change.villa && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>📍 {change.villa} → {change.subCategory}</div>}
-
-                      {change.comments?.length > 0 && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>💬 {change.comments.length} comment(s)</div>}
-
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                        <button type="button" onClick={() => approveChange(change.id)} style={{ flex: 1, padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>✓ Approve</button>
-                        <button type="button" onClick={() => setPendingReviewModal(change)} style={{ padding: '10px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Review</button>
-                        <button type="button" onClick={() => rejectChange(change.id)} style={{ padding: '10px 16px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>✕</button>
+              {/* Field Updates Section (Purple) */}
+              {pendingChanges.filter(c => c.status === 'pending' && c.type === 'field_edit').length > 0 && (
+                <div style={{ marginBottom: '32px' }}>
+                  <div style={{ background: 'rgba(147,51,234,0.1)', borderRadius: '12px', padding: '16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '24px' }}>📝</span>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#7c3aed' }}>{pendingChanges.filter(c => c.status === 'pending' && c.type === 'field_edit').length} Field Updates</div>
+                        <div style={{ fontSize: '12px', color: '#8b5cf6' }}>Worker-proposed changes to task details</div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => { pendingChanges.filter(c => c.status === 'pending' && c.type === 'field_edit').forEach(c => approveChange(c.id)); }} style={{ padding: '8px 16px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Approve All</button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {pendingChanges.filter(c => c.status === 'pending' && c.type === 'field_edit').map(change => {
+                      const requestedByUser = users.find(u => u.id === change.requestedBy);
+                      const task = change.taskId ? buildingTasks.find(t => t.id === change.taskId) : null;
+                      const fieldLabels = { earliestStart: 'Earliest Start', duration: 'Est. Duration', skilledWorkers: 'Skilled Workers', unskilledWorkers: 'Unskilled Workers', status: 'Status', step: 'Step', task: 'Task', notes: 'Notes', expectedArrival: 'Expected Arrival' };
+                      const formatValue = (field, val) => {
+                        if (!val && val !== 0) return '(empty)';
+                        if (field === 'skilledWorkers' || field === 'unskilledWorkers') return Array.isArray(val) ? (val.length ? val.join(', ') : '(none)') : val;
+                        return val;
+                      };
+                      return (
+                        <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid rgba(147,51,234,0.3)', padding: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <img src={requestedByUser?.avatar} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: '600' }}>{requestedByUser?.username}</div>
+                                <div style={{ fontSize: '11px', color: '#6b7280' }}>{formatTime(change.timestamp)}</div>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '10px', padding: '3px 8px', background: 'rgba(147,51,234,0.1)', color: '#7c3aed', borderRadius: '12px', fontWeight: '600' }}>{fieldLabels[change.field] || change.field}</span>
+                          </div>
+
+                          <div style={{ fontSize: '13px', marginBottom: '8px' }}>
+                            <span style={{ color: '#6b7280' }}>Task:</span> <span style={{ fontWeight: '500' }}>{change.taskName || task?.task || task?.step || 'Unknown'}</span>
+                          </div>
+                          <div style={{ fontSize: '13px', marginBottom: '12px' }}>
+                            <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{formatValue(change.field, change.oldValue)}</span>
+                            <span style={{ margin: '0 8px', color: '#9ca3af' }}>→</span>
+                            <span style={{ color: '#7c3aed', fontWeight: '600' }}>{formatValue(change.field, change.newValue)}</span>
+                          </div>
+                          {change.villa && <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '12px' }}>📍 {change.villa} → {change.subCategory}</div>}
+
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button type="button" onClick={() => approveChange(change.id)} style={{ flex: 1, padding: '8px 12px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>✓ Approve</button>
+                            <button type="button" onClick={() => rejectChange(change.id)} style={{ padding: '8px 12px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}>✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Sequence Changes Section (Yellow) */}
+              {pendingChanges.filter(c => c.status === 'pending' && c.type !== 'field_edit').length > 0 && (
+                <div style={{ marginBottom: '32px' }}>
+                  <div style={{ background: '#fef3c7', borderRadius: '12px', padding: '16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '24px' }}>⚡</span>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>{pendingChanges.filter(c => c.status === 'pending' && c.type !== 'field_edit').length} Sequence Changes</div>
+                        <div style={{ fontSize: '12px', color: '#b45309' }}>New steps, phases, and deletions</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => { pendingChanges.filter(c => c.status === 'pending' && c.type !== 'field_edit').forEach(c => approveChange(c.id)); }} style={{ padding: '8px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>✓ Approve All</button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    {pendingChanges.filter(c => c.status === 'pending' && c.type !== 'field_edit').map(change => {
+                      const requestedByUser = users.find(u => u.id === change.requestedBy);
+                      const task = change.taskId ? buildingTasks.find(t => t.id === change.taskId) : null;
+                      return (
+                        <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid #fef3c7', padding: '20px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <img src={requestedByUser?.avatar} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                              <div>
+                                <div style={{ fontSize: '14px', fontWeight: '600' }}>{requestedByUser?.username}</div>
+                                <div style={{ fontSize: '12px', color: '#6b7280' }}>{formatTime(change.timestamp)}</div>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '11px', padding: '4px 10px', background: '#fef3c7', color: '#d97706', borderRadius: '20px', fontWeight: '600', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
+                          </div>
+
+                          <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>
+                            {change.type === 'edit' && <>Change <span style={{ color: '#059669' }}>{change.field}</span>: <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{change.oldValue || '(empty)'}</span> → <span style={{ color: '#059669' }}>{change.newValue}</span></>}
+                            {change.type === 'add_step' && <>Add new step: <span style={{ color: '#059669' }}>"{change.newTask?.step}"</span> to {change.subCategory}</>}
+                            {change.type === 'add_phase' && <>Add new phase: <span style={{ color: '#059669' }}>{change.subCategory}</span></>}
+                            {change.type === 'delete' && <>Delete step: <span style={{ color: '#dc2626' }}>"{change.step}"</span></>}
+                            {change.type === 'add_sequence' && <>Add new building sequence: <span style={{ color: '#059669' }}>"{change.sequenceLabel}"</span></>}
+                          </div>
+
+                          {change.villa && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>📍 {change.villa} → {change.subCategory}</div>}
+
+                          {change.comments?.length > 0 && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>💬 {change.comments.length} comment(s)</div>}
+
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                            <button type="button" onClick={() => approveChange(change.id)} style={{ flex: 1, padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>✓ Approve</button>
+                            <button type="button" onClick={() => setPendingReviewModal(change)} style={{ padding: '10px 16px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Review</button>
+                            <button type="button" onClick={() => rejectChange(change.id)} style={{ padding: '10px 16px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -2635,6 +3059,8 @@ export default function Home() {
           {(() => {
             const myPending = pendingChanges.filter(c => c.requestedBy === currentUser.id && c.status === 'pending');
             const myHistory = pendingChanges.filter(c => c.requestedBy === currentUser.id && c.status !== 'pending');
+            const myFieldEdits = myPending.filter(c => c.type === 'field_edit');
+            const mySequenceChanges = myPending.filter(c => c.type !== 'field_edit');
 
             return (
               <>
@@ -2647,43 +3073,77 @@ export default function Home() {
                   </div>
                 ) : (
                   <div style={{ marginBottom: '32px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#f59e0b', marginBottom: '16px' }}>⏳ Awaiting Approval ({myPending.length})</h3>
-                    <div style={{ display: 'grid', gap: '12px' }}>
-                      {myPending.map(change => (
-                        <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid #fef3c7', padding: '16px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                            <div>
-                              <span style={{ fontSize: '11px', padding: '3px 8px', background: '#fef3c7', color: '#d97706', borderRadius: '4px', fontWeight: '600', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>{formatTime(change.timestamp)}</div>
-                          </div>
-
-                          <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                            {change.type === 'edit' && `Change ${change.field}: "${change.oldValue || '(empty)'}" → "${change.newValue}"`}
-                            {change.type === 'add_step' && `Add new step: "${change.newTask?.step}"`}
-                            {change.type === 'add_phase' && `Add new phase: ${change.subCategory}`}
-                            {change.type === 'delete' && `Delete step: "${change.step}"`}
-                            {change.type === 'add_sequence' && `Add new building sequence: "${change.sequenceLabel}"`}
-                          </div>
-
-                          {change.villa && <div style={{ fontSize: '12px', color: '#6b7280' }}>📍 {change.villa} → {change.subCategory}</div>}
-
-                          {change.comments?.length > 0 && (
-                            <div style={{ marginTop: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
-                              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '6px' }}>Comments:</div>
-                              {change.comments.map((c, i) => {
-                                const commenter = users.find(u => u.id === c.userId);
-                                return (
-                                  <div key={i} style={{ fontSize: '12px', marginBottom: '4px' }}>
-                                    <span style={{ fontWeight: '500' }}>{commenter?.username}:</span> {c.text}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                    <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#6b7280', marginBottom: '16px' }}>⏳ Awaiting Approval ({myPending.length})</h3>
+                    
+                    {/* Field Edits - Purple */}
+                    {myFieldEdits.length > 0 && (
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#9333ea', marginBottom: '10px' }}>📝 Field Updates ({myFieldEdits.length})</div>
+                        <div style={{ display: 'grid', gap: '10px' }}>
+                          {myFieldEdits.map(change => {
+                            const fieldLabels = { earliestStart: 'Earliest Start', duration: 'Est. Duration', skilledWorkers: 'Skilled Workers', unskilledWorkers: 'Unskilled Workers', status: 'Status', step: 'Step', task: 'Task', notes: 'Notes', expectedArrival: 'Expected Arrival' };
+                            const formatVal = (v) => Array.isArray(v) ? (v.length ? v.join(', ') : 'None') : (v || '(empty)');
+                            return (
+                              <div key={change.id} style={{ background: '#fff', borderRadius: '10px', border: '2px solid rgba(147,51,234,0.3)', padding: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                  <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(147,51,234,0.1)', color: '#9333ea', borderRadius: '4px', fontWeight: '600' }}>{fieldLabels[change.field] || change.field}</span>
+                                  <div style={{ fontSize: '11px', color: '#9ca3af' }}>{formatTime(change.timestamp)}</div>
+                                </div>
+                                <div style={{ fontSize: '13px', marginBottom: '6px' }}>
+                                  <span style={{ color: '#6b7280' }}>{formatVal(change.oldValue)}</span>
+                                  <span style={{ margin: '0 6px', color: '#9333ea' }}>→</span>
+                                  <span style={{ fontWeight: '500', color: '#1f2937' }}>{formatVal(change.newValue)}</span>
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#6b7280' }}>📍 {change.villa} → {change.subCategory}</div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* Sequence Changes - Yellow */}
+                    {mySequenceChanges.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#d97706', marginBottom: '10px' }}>⚡ Sequence Changes ({mySequenceChanges.length})</div>
+                        <div style={{ display: 'grid', gap: '12px' }}>
+                          {mySequenceChanges.map(change => (
+                            <div key={change.id} style={{ background: '#fff', borderRadius: '12px', border: '2px solid #fef3c7', padding: '16px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                <div>
+                                  <span style={{ fontSize: '11px', padding: '3px 8px', background: '#fef3c7', color: '#d97706', borderRadius: '4px', fontWeight: '600', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>{formatTime(change.timestamp)}</div>
+                              </div>
+
+                              <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                                {change.type === 'edit' && `Change ${change.field}: "${change.oldValue || '(empty)'}" → "${change.newValue}"`}
+                                {change.type === 'add_step' && `Add new step: "${change.newTask?.step || '(no step name)'}"`}
+                                {change.type === 'add_phase' && `Add new phase: ${change.subCategory}`}
+                                {change.type === 'delete' && `Delete step: "${change.step}"`}
+                                {change.type === 'add_sequence' && `Add new building sequence: "${change.sequenceLabel}"`}
+                              </div>
+
+                              {change.villa && <div style={{ fontSize: '12px', color: '#6b7280' }}>📍 {change.villa} → {change.subCategory}</div>}
+
+                              {change.comments?.length > 0 && (
+                                <div style={{ marginTop: '12px', padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
+                                  <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '6px' }}>Comments:</div>
+                                  {change.comments.map((c, i) => {
+                                    const commenter = users.find(u => u.id === c.userId);
+                                    return (
+                                      <div key={i} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                                        <span style={{ fontWeight: '500' }}>{commenter?.username}:</span> {c.text}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2692,29 +3152,37 @@ export default function Home() {
                   <div>
                     <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#6b7280', marginBottom: '16px' }}>History</h3>
                     <div style={{ display: 'grid', gap: '8px' }}>
-                      {myHistory.slice(-10).reverse().map(change => (
-                        <div key={change.id} style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: '500' }}>
-                              {change.type === 'edit' && `Changed ${change.field}`}
-                              {change.type === 'add_step' && `Added step: "${change.newTask?.step}"`}
-                              {change.type === 'add_phase' && `Added phase: ${change.subCategory}`}
-                              {change.type === 'delete' && `Deleted step`}
-                              {change.type === 'add_sequence' && `Added sequence`}
+                      {myHistory.slice(-10).reverse().map(change => {
+                        const isFieldEdit = change.type === 'field_edit';
+                        const fieldLabels = { earliestStart: 'Earliest Start', duration: 'Est. Duration', skilledWorkers: 'Skilled Workers', unskilledWorkers: 'Unskilled Workers', status: 'Status', step: 'Step', task: 'Task', notes: 'Notes', expectedArrival: 'Expected Arrival' };
+                        return (
+                          <div key={change.id} style={{ background: '#fff', borderRadius: '8px', border: `1px solid ${isFieldEdit ? 'rgba(147,51,234,0.3)' : '#e5e7eb'}`, padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isFieldEdit ? '#9333ea' : '#f59e0b' }}></span>
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: '500' }}>
+                                  {change.type === 'field_edit' && `Changed ${fieldLabels[change.field] || change.field}`}
+                                  {change.type === 'edit' && `Changed ${change.field}`}
+                                  {change.type === 'add_step' && `Added step: "${change.newTask?.step || '(unnamed)'}"`}
+                                  {change.type === 'add_phase' && `Added phase: ${change.subCategory}`}
+                                  {change.type === 'delete' && `Deleted step`}
+                                  {change.type === 'add_sequence' && `Added sequence`}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>{change.villa} • {formatTime(change.timestamp)}</div>
+                              </div>
                             </div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>{change.villa} • {formatTime(change.timestamp)}</div>
+                            <span style={{
+                              fontSize: '11px',
+                              padding: '4px 10px',
+                              background: change.status === 'approved' ? '#ecfdf5' : '#fef2f2',
+                              color: change.status === 'approved' ? '#059669' : '#dc2626',
+                              borderRadius: '20px',
+                              fontWeight: '600',
+                              textTransform: 'capitalize'
+                            }}>{change.status === 'approved' ? '✓ Approved' : '✕ Rejected'}</span>
                           </div>
-                          <span style={{
-                            fontSize: '11px',
-                            padding: '4px 10px',
-                            background: change.status === 'approved' ? '#ecfdf5' : '#fef2f2',
-                            color: change.status === 'approved' ? '#059669' : '#dc2626',
-                            borderRadius: '20px',
-                            fontWeight: '600',
-                            textTransform: 'capitalize'
-                          }}>{change.status === 'approved' ? '✓ Approved' : '✕ Rejected'}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -2722,6 +3190,96 @@ export default function Home() {
             );
           })()}
         </>)}
+
+        {/* Bug/Change Reports */}
+        {activeNav === 'bugReports' && (
+          <div style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div>
+                <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Bug/Change Requests</h1>
+                <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0' }}>Report bugs or request changes</p>
+              </div>
+              <button type="button" onClick={() => setBugReportModal({ description: '', screenshot: null })} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+                <Icon name="plus" size={18} /> New Report
+              </button>
+            </div>
+
+            {/* Open Reports */}
+            <div style={{ marginBottom: '32px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>Open Reports ({bugReports.filter(b => !b.resolved).length})</h2>
+              {bugReports.filter(b => !b.resolved).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).length === 0 ? (
+                <div style={{ padding: '40px', background: '#f9fafb', borderRadius: '12px', textAlign: 'center', color: '#6b7280' }}>
+                  <Icon name="check" size={32} />
+                  <p style={{ marginTop: '8px' }}>No open bug reports</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {bugReports.filter(b => !b.resolved).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(bug => {
+                    const reporter = users.find(u => u.id === bug.reportedBy);
+                    return (
+                      <div key={bug.id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', display: 'flex', gap: '16px' }}>
+                        {bug.screenshot && (
+                          <div style={{ flexShrink: 0 }}>
+                            <img src={bug.screenshot} alt="Screenshot" style={{ width: '150px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb', cursor: 'pointer' }} onClick={() => window.open(bug.screenshot, '_blank')} />
+                          </div>
+                        )}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <img src={reporter?.avatar} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
+                              <span style={{ fontWeight: '600', fontSize: '14px' }}>{reporter?.username || 'Unknown'}</span>
+                              <span style={{ color: '#9ca3af', fontSize: '12px' }}>{new Date(bug.createdAt).toLocaleDateString()} {new Date(bug.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            {currentUser.isAdmin && (
+                              <button type="button" onClick={() => {
+                                setBugReports(prev => prev.map(b => b.id === bug.id ? { ...b, resolved: true, resolvedAt: new Date().toISOString(), resolvedBy: currentUser.id } : b));
+                                setNotifications(prev => [...prev, { id: 'n' + Date.now(), userId: bug.reportedBy, fromUserId: currentUser.id, text: 'Your bug report has been resolved', timestamp: new Date().toISOString(), read: false, bugId: bug.id }]);
+                              }} style={{ padding: '6px 12px', background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                Mark Resolved
+                              </button>
+                            )}
+                          </div>
+                          <p style={{ margin: 0, fontSize: '14px', color: '#374151', whiteSpace: 'pre-wrap' }}>{bug.description}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Resolved Reports */}
+            <div>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>Resolved ({bugReports.filter(b => b.resolved).length})</h2>
+              {bugReports.filter(b => b.resolved).sort((a, b) => new Date(b.resolvedAt) - new Date(a.resolvedAt)).length === 0 ? (
+                <div style={{ padding: '20px', background: '#f9fafb', borderRadius: '12px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                  No resolved reports yet
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {bugReports.filter(b => b.resolved).sort((a, b) => new Date(b.resolvedAt) - new Date(a.resolvedAt)).map(bug => {
+                    const reporter = users.find(u => u.id === bug.reportedBy);
+                    const resolver = users.find(u => u.id === bug.resolvedBy);
+                    return (
+                      <div key={bug.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', display: 'flex', gap: '12px', opacity: 0.8 }}>
+                        {bug.screenshot && (
+                          <img src={bug.screenshot} alt="Screenshot" style={{ width: '60px', height: '40px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bug.description}</p>
+                          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
+                            Reported by {reporter?.username} • Resolved by {resolver?.username} on {new Date(bug.resolvedAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <span style={{ padding: '4px 8px', background: '#d1fae5', color: '#059669', borderRadius: '4px', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap', height: 'fit-content' }}>✓ Resolved</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Placeholder pages */}
         {['materials', 'reports'].includes(activeNav) && <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#9ca3af' }}><h2 style={{ fontSize: '24px', fontWeight: '600', color: '#6b7280' }}>{navItems.find(n => n.id === activeNav)?.label}</h2><p>Coming soon</p></div>}
@@ -2747,6 +3305,95 @@ export default function Home() {
       {pendingReviewModal && <PendingReviewModal change={pendingReviewModal} onClose={() => setPendingReviewModal(null)} onApprove={approveChange} onReject={rejectChange} onComment={addChangeComment} users={users} buildingTasks={buildingTasks} />}
       {activeComments && <CommentsPanel taskId={activeComments} task={activeTask} comments={comments} setComments={setComments} currentUser={currentUser} users={users} onClose={() => setActiveComments(null)} setNotifications={setNotifications} />}
       {showNotifications && <NotificationsPanel notifications={notifications.filter(n => n.userId === currentUser.id)} setNotifications={setNotifications} users={users} onClose={() => setShowNotifications(false)} onGoToTask={(id) => { setActiveComments(id); setShowNotifications(false); }} />}
+      
+      {/* Bug Report Modal */}
+      {bugReportModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'auto' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>New Bug/Change Report</h2>
+              <button type="button" onClick={() => setBugReportModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><Icon name="x" size={20} /></button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Screenshot <span style={{ color: '#dc2626' }}>*</span></label>
+                <div 
+                  style={{ border: '2px dashed #d1d5db', borderRadius: '8px', padding: '24px', textAlign: 'center', cursor: 'pointer', background: bugReportModal.screenshot ? '#f9fafb' : '#fff' }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => setBugReportModal(prev => ({ ...prev, screenshot: event.target.result }));
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                >
+                  {bugReportModal.screenshot ? (
+                    <div style={{ position: 'relative' }}>
+                      <img src={bugReportModal.screenshot} alt="Screenshot" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }} />
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setBugReportModal(prev => ({ ...prev, screenshot: null })); }} style={{ position: 'absolute', top: '8px', right: '8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={14} /></button>
+                    </div>
+                  ) : (
+                    <>
+                      <Icon name="image" size={32} />
+                      <p style={{ margin: '8px 0 0', color: '#6b7280', fontSize: '14px' }}>Press Ctrl+V to paste screenshot, drag & drop, or</p>
+                      <label style={{ display: 'inline-block', marginTop: '8px', padding: '8px 16px', background: '#f3f4f6', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+                        Choose file
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => setBugReportModal(prev => ({ ...prev, screenshot: event.target.result }));
+                            reader.readAsDataURL(file);
+                          }
+                        }} />
+                      </label>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Description <span style={{ color: '#dc2626' }}>*</span></label>
+                <textarea
+                  value={bugReportModal.description}
+                  onChange={(e) => setBugReportModal(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe the bug or change request..."
+                  style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', minHeight: '120px', resize: 'vertical', boxSizing: 'border-box' }}
+                  autoFocus
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button type="button" onClick={() => setBugReportModal(null)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>Cancel</button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    if (!bugReportModal.screenshot || !bugReportModal.description.trim()) {
+                      alert('Please add both a screenshot and description');
+                      return;
+                    }
+                    const newReport = {
+                      id: 'bug' + Date.now(),
+                      description: bugReportModal.description.trim(),
+                      screenshot: bugReportModal.screenshot,
+                      reportedBy: currentUser.id,
+                      createdAt: new Date().toISOString(),
+                      resolved: false
+                    };
+                    setBugReports(prev => [...prev, newReport]);
+                    setBugReportModal(null);
+                  }}
+                  disabled={!bugReportModal.screenshot || !bugReportModal.description.trim()}
+                  style={{ flex: 1, padding: '12px', background: (!bugReportModal.screenshot || !bugReportModal.description.trim()) ? '#d1d5db' : '#059669', color: '#fff', border: 'none', borderRadius: '8px', cursor: (!bugReportModal.screenshot || !bugReportModal.description.trim()) ? 'not-allowed' : 'pointer', fontWeight: '600' }}
+                >
+                  Submit Report
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
